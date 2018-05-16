@@ -74,9 +74,8 @@ public class UnseenActivity  extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        toolbar.setTitle("Datalabs");
-        setSupportActionBar(toolbar);
+
+        getSupportActionBar().setTitle("Datalabs");
         lv = findViewById(R.id.listView);
         asyncOffers = new ArrayList<>();
         offers = new ArrayList<>();
@@ -163,4 +162,8 @@ public class UnseenActivity  extends AppCompatActivity {
         finish();
     }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+    }
 }

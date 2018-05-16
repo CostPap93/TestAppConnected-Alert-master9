@@ -69,49 +69,51 @@ public class AlarmReceiver extends BroadcastReceiver {
     NotificationManager nm;
     Date currentTime = new Date();
     Date lastUpdate;
-    static BubbleLayout bubbleView;
+    ArrayList<BubbleLayout> bubbles =new ArrayList<>();
+    int notCount;
 
     ArrayList<JobOffer> asyncOffers = new ArrayList<>();
     SharedPreferences settingsPreferences;
-BubblesManager bubblesManager;
+    BubblesManager bubblesManager;
 
     NotificationBadge mBadge;
     ArrayList<Integer> idArray = new ArrayList<>();
     String message = "";
     RequestQueue queue;
     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-    Boolean bubbleInit = false;
+    boolean bubbleInit = false;
+    boolean bubbleDel = false;
 
 
     @Override
     public void onReceive(final Context context, final Intent intent) {
         settingsPreferences = PreferenceManager.getDefaultSharedPreferences(MyApplication.getAppContext());
+
+        notCount = 0;
+
         queue = Volley.newRequestQueue(MyApplication.getAppContext());
 
-        settingsPreferences.edit().putBoolean("makeRequest",true).apply();
-
-
-
-    }
-
-    public int checkForOffers() {
-        int notCount = 0;
-        for (int i = 0; i < settingsPreferences.getInt("numberOfOffers", 0); i++) {
-        System.out.println(settingsPreferences.getInt("numberOfOffers", 0));
-            System.out.println(settingsPreferences.getLong("offerDate " + i,0) > settingsPreferences.getLong("lastSeenDate", 0));
-            if (settingsPreferences.getLong("offerDate " + i,0) > settingsPreferences.getLong("lastSeenDate", 0)) {
-                notCount++;
+        if(isConn()) {
+            for (int j = 0; j < settingsPreferences.getInt("numberOfCheckedCategories", 0); j++) {
+                initializeBubblesManager();
+                queue.add(volleySetCheckedCategories(String.valueOf(settingsPreferences.getInt("checkedCategoryId " + j, 0))));
+                //new TaskShowOffersFromCategories().execute(String.valueOf(settingsPreferences.getInt("checkedCategoryId " + j, 0)));
 
             }
 
-            System.out.println(settingsPreferences.getLong("lastSeenDate", 0) + " at the end of alarmreceiver ");
+        }else {
+            settingsPreferences.edit().putBoolean("makeRequest", true).apply();
 
         }
-        return notCount;
+
 
     }
 
-    public boolean isConn(){
+
+
+
+
+    public boolean isConn() {
         ConnectivityManager connectivityManager = (ConnectivityManager) MyApplication.getAppContext().getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo networkInfo = connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
         boolean isWifiConn = networkInfo.isConnected();
@@ -122,182 +124,29 @@ BubblesManager bubblesManager;
         return isWifiConn || isMobileConn;
     }
 
-
-
-
-
-    /*public class TaskShowOffersFromCategories extends AsyncTask<String,Integer,ArrayList<JobOffer>> {
-        SharedPreferences settingsPreferences = PreferenceManager.getDefaultSharedPreferences(MyApplication.getAppContext());
-        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-
-
-        protected void onPreExecute() {
-
-            super.onPreExecute();
-
-        }
-
-        @Override
-        protected void onPostExecute(ArrayList<JobOffer> fiveOffers) {
-
-            if(fiveOffers!= null) {
-
-
-                for (int j = 0; j < 5; j++) {
-                    settingsPreferences.edit().remove("offerId " + j).apply();
-                    settingsPreferences.edit().remove("offerCatid " + j).apply();
-                    settingsPreferences.edit().remove("offerTitle " + j).apply();
-                    settingsPreferences.edit().remove("offerDate " + j).apply();
-                    settingsPreferences.edit().remove("offerDownloaded " + j).apply();
-                }
-                for (int i = 0; i < fiveOffers.size(); i++) {
-                    if (i < 5) {
-
-                        settingsPreferences.edit().putInt("offerId " + i, fiveOffers.get(i).getId()).apply();
-                        settingsPreferences.edit().putInt("offerCatid " + i, fiveOffers.get(i).getCatid()).apply();
-                        settingsPreferences.edit().putString("offerTitle " + i, fiveOffers.get(i).getTitle()).apply();
-                        settingsPreferences.edit().putLong("offerDate " + i, fiveOffers.get(i).getDate().getTime()).apply();
-                        settingsPreferences.edit().putString("offerDownloaded " + i, fiveOffers.get(i).getDownloaded()).apply();
-                        System.out.println(settingsPreferences.getLong("offerDate " + i, 0));
-                        System.out.println(settingsPreferences.getString("offerTitle " + i, ""));
-                        settingsPreferences.edit().putInt("numberOfOffers", fiveOffers.size()).apply();
-                    } else
-                        settingsPreferences.edit().putInt("numberOfOffers", 5).apply();
-                }
-                System.out.println(settingsPreferences.getLong("lastSeenDate", 0));
-
-
-                notCount = checkForOffers();
-
-                if (notCount > 0) {
-                    initBubble();
-                    settingsPreferences.edit().putInt("numberOfUnseenOffers", notCount).apply();
-                    settingsPreferences.edit().putLong("lastSeenDate", settingsPreferences.getLong("offerDate " + 0, 0)).apply();
-
-                    Intent intentBackToMain = new Intent(MyApplication.getAppContext(), MainActivity.class);
-                    intentBackToMain.putExtra("source", "alarm");
-                    intentBackToMain.putExtra("notificationCount", notCount);
-                    PendingIntent pendingIntent = PendingIntent.getActivity(MyApplication.getAppContext(), 0, intentBackToMain, PendingIntent.FLAG_UPDATE_CURRENT);
-                    notification.setContentTitle("You have " + notCount + " unseen offers!!");
-                    notification.setNumber(notCount);
-                    notification.setContentIntent(pendingIntent);
-
-                    NotificationManager nm = (NotificationManager) MyApplication.getAppContext().getSystemService(NOTIFICATION_SERVICE);
-                    nm.notify(uniqueID, notification.build());
-                    settingsPreferences.edit().putBoolean("makeRequest", false).apply();
-
-                }
-            } else{
-                Toast.makeText(MyApplication.getAppContext(),"There is some problem with the server",Toast.LENGTH_LONG);
-            }
-
-
-
-        }
-
-        @Override
-        protected ArrayList<JobOffer> doInBackground(String... params) {
-
-            Map<String, String> postParam = new HashMap<>();
-            postParam.put("action", "showOffersFromCategory");
-            postParam.put("jacat_id",params[0]);
-
-            try {
-                String jsonString = m_AccessServiceAPI.getJSONStringWithParam_POST("http://10.0.2.2/android/jobAds.php?", postParam);
-                if(jsonString==""){
-                    return null;
-                }
-                JSONObject jsonObjectAll = new JSONObject(jsonString);
-                JSONArray jsonArray = jsonObjectAll.getJSONArray("offers");
-                int i = 0;
-
-                while(i<jsonArray.length() && i<5) {
-
-                    JSONObject jsonObjectCategory = jsonArray.getJSONObject(i);
-
-                    JobOffer offer = new JobOffer();
-                    offer.setId(Integer.valueOf(jsonObjectCategory.getString("jad_id")));
-                    offer.setCatid(Integer.valueOf(jsonObjectCategory.getString("jad_catid")));
-                    offer.setTitle(jsonObjectCategory.getString("jad_title"));
-                    offer.setDate(format.parse(jsonObjectCategory.getString("jad_date")));
-                    offer.setDownloaded(jsonObjectCategory.getString("jad_downloaded"));
-                    System.out.println(offer.getTitle() + " first time");
-
-                    asyncOffers.add(offer);
-
-
-                    Collections.sort(asyncOffers, new Comparator<JobOffer>() {
-                        @Override
-                        public int compare(JobOffer jobOffer, JobOffer t1) {
-                            if(jobOffer.getDate().getTime()-t1.getDate().getTime()<0)
-                                return 1;
-                            else if(jobOffer.getDate().getTime()-t1.getDate().getTime()==0)
-                                return 0;
-                            else
-                                return -1;
-                        }
-                    });
-                    for(int x=0;x<asyncOffers.size();x++) {
-                        System.out.println(asyncOffers.get(x).getTitle());
+    public int checkForOffers() {
+        boolean searchChecked = false;
+        int notCount = 0;
+        for (int i = 0; i < settingsPreferences.getInt("numberOfOffers", 0); i++) {
+            System.out.println(settingsPreferences.getInt("numberOfOffers", 0));
+            System.out.println(settingsPreferences.getInt("numberOfCheckedCategories", 0));
+            System.out.println(settingsPreferences.getLong("offerDate " + i,0) > settingsPreferences.getLong("lastSeenDate", 0));
+            if (settingsPreferences.getLong("offerDate " + i,0) > settingsPreferences.getLong("lastSeenDate", 0)) {
+                for(int j = 0; j < settingsPreferences.getInt("numberOfCheckedCategories", 0); j++) {
+                    System.out.println(settingsPreferences.getInt("offerCatid " + i,0));
+                    System.out.println(settingsPreferences.getInt("checkedCategoryId "+j,0));
+                    if(settingsPreferences.getInt("offerCatid " + i,0)==settingsPreferences.getInt("checkedCategoryId "+j,0)) {
+                        notCount++;
                     }
-
-                    i++;
                 }
-
-            } catch (JSONException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (ParseException e) {
-                e.printStackTrace();
             }
-            return asyncOffers;
-        }
 
-        private void initBubble(){
-            bubblesManager = new BubblesManager.Builder(MyApplication.getAppContext())
-                    .setTrashLayout(R.layout.bubble_remove)
-                    .setInitializationCallback(new OnInitializedCallback() {
-                        @Override
-                        public void onInitialized() {
-                            addNewBubble();
-                        }
-                    }).build();
-            bubblesManager.initialize();
-        }
-
-        private void addNewBubble(){
-            final BubbleLayout bubbleView = (BubbleLayout) LayoutInflater.from(MyApplication.getAppContext())
-                    .inflate(R.layout.bubble_layout,null);
-            mBadge = (NotificationBadge) bubbleView.findViewById(R.id.badge);
-            mBadge.setNumber(notCount);
-
-            bubbleView.setOnBubbleRemoveListener(new BubbleLayout.OnBubbleRemoveListener() {
-                @Override
-                public void onBubbleRemoved(BubbleLayout bubble) {
-                    Toast.makeText(MyApplication.getAppContext(), "Removed", Toast.LENGTH_SHORT).show();
-                }
-            });
-
-            bubbleView.setOnBubbleClickListener(new BubbleLayout.OnBubbleClickListener() {
-                @Override
-                public void onBubbleClick(BubbleLayout bubble) {
-                    Toast.makeText(MyApplication.getAppContext(),"Clicked",Toast.LENGTH_SHORT).show();
-                    Intent intentBubbleToMain = new Intent(MyApplication.getAppContext(),MainActivity.class);
-                    intentBubbleToMain.putExtra("source","alarm");
-                    MyApplication.getAppContext().startActivity(intentBubbleToMain);
-                    bubblesManager.removeBubble(bubbleView);
-                    bubblesManager.recycle();
-                }
-            });
-
-
-            bubblesManager.addBubble(bubbleView,60,60);
-
+            System.out.println(settingsPreferences.getLong("lastSeenDate", 0) + " at the end of alarmreceiver ");
 
         }
 
-    }*/
+        return notCount;
+    }
 
     public StringRequest volleySetCheckedCategories(final String param) {
         String url = "http://10.0.2.2/android/jobAds.php?";
@@ -309,7 +158,6 @@ BubblesManager bubblesManager;
                     public void onResponse(String response) {
 
                         // Display the first 500 characters of the response string.
-                        message = "Response is: " + response;
                         System.out.println("Volley: " + message);
                         try {
                             JSONObject jsonObjectAll = new JSONObject(response);
@@ -362,13 +210,15 @@ BubblesManager bubblesManager;
 
 
 
-                            for (int j = 0; j < 5; j++) {
-                                settingsPreferences.edit().remove("offerId " + j).apply();
-                                settingsPreferences.edit().remove("offerCatid " + j).apply();
-                                settingsPreferences.edit().remove("offerTitle " + j).apply();
-                                settingsPreferences.edit().remove("offerDate " + j).apply();
-                                settingsPreferences.edit().remove("offerDownloaded " + j).apply();
-                            }
+                        for (int j = 0; j < 5; j++) {
+                            settingsPreferences.edit().remove("offerId " + j).apply();
+                            settingsPreferences.edit().remove("offerCatid " + j).apply();
+                            settingsPreferences.edit().remove("offerTitle " + j).apply();
+                            settingsPreferences.edit().remove("offerDate " + j).apply();
+                            settingsPreferences.edit().remove("offerDownloaded " + j).apply();
+                        }
+
+                        if(asyncOffers.size()>0) {
                             for (int i = 0; i < asyncOffers.size(); i++) {
                                 if (i < 5) {
 
@@ -386,14 +236,12 @@ BubblesManager bubblesManager;
                             System.out.println(settingsPreferences.getLong("lastSeenDate", 0));
 
 
-
-                            if (checkForOffers() > 0 && asyncOffers.get(0).getDate().getTime() > settingsPreferences.getLong("lastNotDate",0)) {
+                            if (checkForOffers() > 0 && asyncOffers.get(0).getDate().getTime() > settingsPreferences.getLong("lastNotDate", 0)) {
 
                                 addNewBubble();
 
-
                                 settingsPreferences.edit().putInt("numberOfUnseenOffers", checkForOffers()).apply();
-                                System.out.println(settingsPreferences.getInt("numberOfUnseenOffers",0));
+                                System.out.println(settingsPreferences.getInt("numberOfUnseenOffers", 0));
 
                                 notification = new NotificationCompat.Builder(MyApplication.getAppContext(), "notification");
                                 notification.setAutoCancel(true);
@@ -407,6 +255,7 @@ BubblesManager bubblesManager;
                                 notification.setVibrate(new long[0]);
                                 notification.setBadgeIconType(NotificationCompat.BADGE_ICON_SMALL);
 
+
                                 Intent intentBackToMain = new Intent(MyApplication.getAppContext(), UnseenActivity.class);
                                 intentBackToMain.putExtra("source", "alarm");
                                 PendingIntent pendingIntent = PendingIntent.getActivity(MyApplication.getAppContext(), 0, intentBackToMain, PendingIntent.FLAG_UPDATE_CURRENT);
@@ -416,15 +265,14 @@ BubblesManager bubblesManager;
                                 nm = (NotificationManager) MyApplication.getAppContext().getSystemService(NOTIFICATION_SERVICE);
                                 nm.notify(uniqueID, notification.build());
 
+
                                 settingsPreferences.edit().putBoolean("makeRequest", false).apply();
                                 settingsPreferences.edit().putLong("lastNotDate", asyncOffers.get(0).getDate().getTime()).apply();
 
-
-                            } else{
-                            Toast.makeText(MyApplication.getAppContext(),"There is some problem with the server",Toast.LENGTH_LONG);
+                            } else {
+                                Toast.makeText(MyApplication.getAppContext(), "There is some problem with the server", Toast.LENGTH_LONG);
+                            }
                         }
-
-
 
                     }
 
@@ -459,7 +307,8 @@ BubblesManager bubblesManager;
                 }
             }
         }
-        ) {
+        )
+        {
             @Override
             protected Map<String, String> getParams() {
                 Map<String, String> params = new HashMap<>();
@@ -472,54 +321,53 @@ BubblesManager bubblesManager;
         return stringRequest;
     }
 
-    private void initBubble(){
 
-        bubblesManager = new BubblesManager.Builder(MyApplication.getAppContext())
-                .setTrashLayout(R.layout.bubble_remove)
-                .setInitializationCallback(new OnInitializedCallback() {
-                    @Override
-                    public void onInitialized() {
-                    }
-                }).build();
-        bubblesManager.initialize();
-        bubbleInit = true;
-
-    }
-
-    private void addNewBubble(){
-
-        AlarmReceiver.bubbleView = (BubbleLayout) LayoutInflater.from(MyApplication.getAppContext())
-                .inflate(R.layout.bubble_layout,null);
-        mBadge = bubbleView.findViewById(R.id.badge);
+    private void addNewBubble() {
+        BubbleLayout bubbleView = (BubbleLayout)LayoutInflater.from(MyApplication.getAppContext()).inflate(R.layout.bubble_layout, null);
+        mBadge =bubbleView.findViewById(R.id.badge);
         mBadge.setNumber(checkForOffers());
 
         bubbleView.setOnBubbleRemoveListener(new BubbleLayout.OnBubbleRemoveListener() {
             @Override
             public void onBubbleRemoved(BubbleLayout bubble) {
-                Toast.makeText(MyApplication.getAppContext(), "Removed", Toast.LENGTH_SHORT).show();
+
             }
         });
 
+        //The Onclick Listener for the bubble has been set below.
         bubbleView.setOnBubbleClickListener(new BubbleLayout.OnBubbleClickListener() {
+
             @Override
             public void onBubbleClick(BubbleLayout bubble) {
-                Toast.makeText(MyApplication.getAppContext(),"Clicked",Toast.LENGTH_SHORT).show();
-                Intent intentBubbleToMain = new Intent(MyApplication.getAppContext(),UnseenActivity.class);
-                intentBubbleToMain.putExtra("source","alarm");
+
+                Toast.makeText(MyApplication.getAppContext(), "Clicked", Toast.LENGTH_SHORT).show();
+                Intent intentBubbleToMain = new Intent(MyApplication.getAppContext(), UnseenActivity.class);
+                intentBubbleToMain.putExtra("source", "alarm");
                 MyApplication.getAppContext().startActivity(intentBubbleToMain);
                 bubblesManager.removeBubble(bubble);
-                bubblesManager.recycle();
-                nm.cancel(uniqueID);
 
+                bubbleDel = true;
+                nm.cancel(uniqueID);
             }
         });
-
-
-
-        bubblesManager.addBubble(bubbleView,60,60);
-
+        bubbleView.setShouldStickToWall(true);
+        bubblesManager.addBubble(bubbleView, 60, 20);
+        bubbles.add(bubbleView);
     }
 
+    private void initializeBubblesManager() {
+        bubblesManager = new BubblesManager.Builder(MyApplication.getAppContext())
+                .setTrashLayout(R.layout.bubble_remove)
+                .setInitializationCallback(new OnInitializedCallback() {
+                    @Override
+                    public void onInitialized() {
+
+                    }
+                })
+                .build();
+        bubblesManager.initialize();
+    }
 
 }
+
 

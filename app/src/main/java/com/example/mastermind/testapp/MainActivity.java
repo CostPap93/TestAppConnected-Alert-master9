@@ -96,6 +96,7 @@ public class MainActivity extends AppCompatActivity  {
     RequestQueue queue;
     SwipeRefreshLayout swipeLayout;
     ArrayList<Integer> idArray = new ArrayList<>();
+    int s = 0;
 
 
 
@@ -104,9 +105,10 @@ public class MainActivity extends AppCompatActivity  {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        toolbar.setTitle("Datalabs");
-        setSupportActionBar(toolbar);
+        getSupportActionBar().setTitle("Datalabs");
+//        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+//        toolbar.setTitle("Datalabs");
+//        setSupportActionBar(toolbar);
         lv = findViewById(R.id.listView);
         asyncOffers = new ArrayList<>();
         offers = new ArrayList<>();
@@ -122,7 +124,7 @@ public class MainActivity extends AppCompatActivity  {
 
         System.out.println(settingsPreferences.getBoolean("checkIsChanged", false));
 
-
+        System.out.println(settingsPreferences.getInt("numberOfOffers", 0));
             for (int i = 0; i < settingsPreferences.getInt("numberOfOffers", 0); i++) {
 
                 JobOffer jobOffer = new JobOffer();
@@ -131,6 +133,7 @@ public class MainActivity extends AppCompatActivity  {
                 jobOffer.setTitle(settingsPreferences.getString("offerTitle " + i, ""));
                 jobOffer.setDate(new Date(settingsPreferences.getLong("offerDate " + i, 0)));
                 jobOffer.setDownloaded(settingsPreferences.getString("offerDownloaded " + i, ""));
+                System.out.println(jobOffer.getTitle()+" Is it empty");
                 offers.add(jobOffer);
 
             }
@@ -139,6 +142,9 @@ public class MainActivity extends AppCompatActivity  {
         JobOfferAdapter jobOfferAdapter = new JobOfferAdapter(getApplicationContext(), offers);
         lv.setAdapter(jobOfferAdapter);
         System.out.println(settingsPreferences.getLong("interval",0));
+
+        scheduleJob();
+
 
 
         lv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -164,7 +170,7 @@ public class MainActivity extends AppCompatActivity  {
             }
         });
 
-        scheduleJob();
+
 
 
     }
@@ -172,7 +178,6 @@ public class MainActivity extends AppCompatActivity  {
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private void scheduleJob() {
         JobInfo myJob = new JobInfo.Builder(0, new ComponentName(MyApplication.getAppContext(), NetworkSchedulerService.class))
-
                 .setMinimumLatency(1000)
                 .setOverrideDeadline(2000)
                 .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
@@ -182,6 +187,9 @@ public class MainActivity extends AppCompatActivity  {
         JobScheduler jobScheduler = (JobScheduler) MyApplication.getAppContext().getSystemService(Context.JOB_SCHEDULER_SERVICE);
         jobScheduler.schedule(myJob);
     }
+
+
+
 
     @Override
     protected void onStop() {
@@ -214,9 +222,6 @@ public class MainActivity extends AppCompatActivity  {
 
         swipeLayout.setRefreshing(false);
     }
-
-
-
 
 
     public void btnBackClicked(View view){
@@ -266,6 +271,7 @@ public class MainActivity extends AppCompatActivity  {
 
                         // Display the first 500 characters of the response string.
                         System.out.println("Volley: " + message);
+                        System.out.println(response);
                         try {
                             JSONObject jsonObjectAll = new JSONObject(response);
                             JSONArray jsonArray = jsonObjectAll.getJSONArray("offers");
@@ -442,5 +448,8 @@ public class MainActivity extends AppCompatActivity  {
 
     }
 
-
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+    }
 }

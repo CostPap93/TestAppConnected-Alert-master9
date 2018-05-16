@@ -63,6 +63,7 @@ public class SplashActivity extends AppCompatActivity {
     ArrayList<Integer> idArray = new ArrayList<>();
     SharedPreferences settingsPreferences;
     PendingIntent pendingIntentA;
+    int t = 0;
 
 
     @Override
@@ -87,6 +88,7 @@ public class SplashActivity extends AppCompatActivity {
 
 
         settingsPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        settingsPreferences.edit().clear().apply();
         System.out.println(settingsPreferences.getInt("numberOfCategories", 0) == 0);
         System.out.println(settingsPreferences.getInt("numberOfCheckedCategories", 0) == 0);
 
@@ -95,9 +97,15 @@ public class SplashActivity extends AppCompatActivity {
         System.out.println(settingsPreferences.getBoolean("checkIsChanged", false));
 
         if (settingsPreferences.getInt("numberOfCategories", 0) == 0 && isConn()) {
-            settingsPreferences.edit().putLong("interval", 1000).apply();
+            settingsPreferences.edit().putLong("interval", 6000).apply();
+            settingsPreferences.edit().putBoolean("makeRequest",false).apply();
+            System.out.println(settingsPreferences.getLong("interval",0));
+            start();
+
 
             queue.add(volleySetDefault());
+
+
 
             /*try {
                 new TaskSetDefaultCateogries().execute().get();
@@ -119,10 +127,10 @@ public class SplashActivity extends AppCompatActivity {
             }*/
         } else if (settingsPreferences.getInt("numberOfCategories", 0) == 0 && !isConn()) {
             Toast.makeText(this, "You Have To Be Connected To The Internet The First Time", Toast.LENGTH_LONG).show();
-            Intent intent = new Intent(getApplicationContext(),MainActivity.class);
+            Intent intent = new Intent(this,MainActivity.class);
             startActivity(intent);
         } else {
-            Intent intent = new Intent(getApplicationContext(),MainActivity.class);
+            Intent intent = new Intent(this,MainActivity.class);
             startActivity(intent);
         }
 
@@ -266,6 +274,10 @@ public class SplashActivity extends AppCompatActivity {
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
+
+
+
+
                         // Display the first 500 characters of the response string.
                         try {
                             JSONObject jsonObjectAll = new JSONObject(response);
@@ -284,21 +296,24 @@ public class SplashActivity extends AppCompatActivity {
                                 System.out.println(jsonObjectCategory.toString());
                                 System.out.println(settingsPreferences.getInt("checkedCategoryId " + i, 0) + "In The Task set Default");
                                 System.out.println(settingsPreferences.getString("checkedCategoryTitle " + i, ""));
-
-                                System.out.println(settingsPreferences.getInt("numberOfCheckedCategories",0));
-
-                                for (int v = 0; v < (settingsPreferences.getInt("numberOfCheckedCategories", 0)); v++) {
-                                    if (settingsPreferences.getInt("checkedCategoryId " + v, 0) != 0) {
-                                        System.out.println(settingsPreferences.getInt("checkedCategoryId " + v, 0) + "Before the task show for the first time");
-                                        System.out.println(settingsPreferences.getString("checkedCategoryTitle " + v, ""));
-                                        //new TaskShowOffersFromCategories().execute(String.valueOf(settingsPreferences.getInt("checkedCategoryId " + v, 0)));
-                                        queue.add(volleySetCheckedCategories(String.valueOf(settingsPreferences.getInt("checkedCategoryId " + v, 0))));
-                                    }
-                                }
-
                             }
+                                System.out.println(settingsPreferences.getInt("numberOfCheckedCategories", 0));
+
+                            for (int v = 0; v < (settingsPreferences.getInt("numberOfCheckedCategories", 0)); v++) {
+                                if (settingsPreferences.getInt("checkedCategoryId " + v, 0) != 0) {
+                                    System.out.println(settingsPreferences.getInt("checkedCategoryId " + v, 0) + "Before the task show for the first time");
+                                    System.out.println(settingsPreferences.getString("checkedCategoryTitle " + v, ""));
+                                    //new TaskShowOffersFromCategories().execute(String.valueOf(settingsPreferences.getInt("checkedCategoryId " + v, 0)));
+                                    queue.add(volleySetCheckedCategories(String.valueOf(settingsPreferences.getInt("checkedCategoryId " + v, 0))));
+                                }
+                            }
+
+
                         } catch (JSONException e) {
+
                             e.printStackTrace();
+                            Intent intentError = new Intent(SplashActivity.this,MainActivity.class);
+                            startActivity(intentError);
                         }
                     }
                 }, new Response.ErrorListener() {
@@ -440,14 +455,22 @@ public class SplashActivity extends AppCompatActivity {
                             settingsPreferences.edit().putLong("lastNotDate", asyncOffers.get(0).getDate().getTime()).apply();
 
                             System.out.println(settingsPreferences.getLong("lastSeenDate", 0));
+
+                        }
+                        t++;
+
+                        System.out.println(t);
+                        System.out.println(settingsPreferences.getInt("numberOfCheckedCategories",0));
+
+                        if(t==settingsPreferences.getInt("numberOfCheckedCategories",0)){
+                            Intent intent = new Intent(SplashActivity.this, MainActivity.class);
+                            startActivity(intent);
                         }
 
-                        start();
 
 
 
-                        Intent intent = new Intent(MyApplication.getAppContext(), MainActivity.class);
-                        MyApplication.getAppContext().startActivity(intent);
+
                     }
 
                 }, new Response.ErrorListener() {
@@ -494,5 +517,10 @@ public class SplashActivity extends AppCompatActivity {
             }
         };
         return stringRequest;
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
     }
 }

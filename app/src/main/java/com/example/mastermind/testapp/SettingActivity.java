@@ -87,12 +87,14 @@ public class SettingActivity  extends AppCompatActivity {
 
     RequestQueue queue;
     SwipeRefreshLayout swipeLayoutSettings;
+    int t=0,s=0;
 
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_settings);
+        getSupportActionBar().setTitle("Datalabs");
         settingsPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         checkBox = findViewById(R.id.chbox_category);
         lv = findViewById(R.id.lv_categories);
@@ -129,9 +131,9 @@ public class SettingActivity  extends AppCompatActivity {
 
     }
 
-        if (settingsPreferences.getLong("interval", 0) == 1000) {
+        if (settingsPreferences.getLong("interval", 0) == 6000) {
             radioButton.setChecked(true);
-        } else if (settingsPreferences.getLong("interval", 0) == 6000) {
+        } else if (settingsPreferences.getLong("interval", 0) == 18000) {
             radioButton1.setChecked(true);
         } else {
             radioButton2.setChecked(true);
@@ -186,6 +188,7 @@ public class SettingActivity  extends AppCompatActivity {
             }
             System.out.println(offerCategories.size());
             for (OfferCategory oc : offerCategories) {
+                System.out.println(oc.getCatid()+"Save");
                 //new TaskShowOffersFromCategories().execute(String.valueOf(settingsPreferences.getInt("checkedCategoryId " + v, 0))).get();
                 queue.add(volleySaveOffers(String.valueOf(oc.getCatid())));
             }
@@ -193,18 +196,18 @@ public class SettingActivity  extends AppCompatActivity {
 
 
             if (radioButton.isChecked()) {
-                if (!(settingsPreferences.getLong("interval", 0) == 1000)) {
-                    settingsPreferences.edit().putLong("interval", 1000).apply();
-
-                }
-            } else if (radioButton1.isChecked()) {
                 if (!(settingsPreferences.getLong("interval", 0) == 6000)) {
                     settingsPreferences.edit().putLong("interval", 6000).apply();
 
                 }
+            } else if (radioButton1.isChecked()) {
+                if (!(settingsPreferences.getLong("interval", 0) == 18000)) {
+                    settingsPreferences.edit().putLong("interval", 18000).apply();
+
+                }
             } else {
-                if (!(settingsPreferences.getLong("interval", 0) == 10000)) {
-                    settingsPreferences.edit().putLong("interval", 10000).apply();
+                if (!(settingsPreferences.getLong("interval", 0) == 30000)) {
+                    settingsPreferences.edit().putLong("interval", 30000).apply();
 
                 }
             }
@@ -248,7 +251,7 @@ public class SettingActivity  extends AppCompatActivity {
                     }
                 }
             }*/
-            settingsPreferences.edit().putLong("interval", 1000).apply();
+            settingsPreferences.edit().putLong("interval", 6000).apply();
             start();
         }else {
             Toast.makeText(SettingActivity.this, "You Have To Be Connected To Reset", Toast.LENGTH_LONG).show();
@@ -416,6 +419,7 @@ public class SettingActivity  extends AppCompatActivity {
                     public void onResponse(String response) {
                         // Display the first 500 characters of the response string.
                         System.out.println("Volley: " + message);
+                        System.out.println(response);
                         try {
                             JSONObject jsonObjectAll = new JSONObject(response);
 
@@ -507,6 +511,7 @@ public class SettingActivity  extends AppCompatActivity {
 
                         // Display the first 500 characters of the response string.
                         System.out.println("Volley: " + message);
+                        System.out.println(response);
                         try {
                             JSONObject jsonObjectAll = new JSONObject(response);
                             JSONArray jsonArray = jsonObjectAll.getJSONArray("offers");
@@ -588,10 +593,12 @@ public class SettingActivity  extends AppCompatActivity {
 
                                 System.out.println(settingsPreferences.getLong("lastSeenDate", 0));
                             }
+                            t++;
 
-
-                            Intent intent = new Intent(MyApplication.getAppContext(), MainActivity.class);
-                            MyApplication.getAppContext().startActivity(intent);
+                        if(t==settingsPreferences.getInt("numberOfCheckedCategories",0)){
+                            Intent intent = new Intent(SettingActivity.this, MainActivity.class);
+                            startActivity(intent);
+                        }
                     }
 
                 }, new Response.ErrorListener() {
@@ -657,6 +664,7 @@ public class SettingActivity  extends AppCompatActivity {
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
+                        System.out.println(response);
                         ArrayList<OfferCategory> categoriesRefresh = new ArrayList<>();
 
 
@@ -767,6 +775,8 @@ public class SettingActivity  extends AppCompatActivity {
 
                         // Display the first 500 characters of the response string.
                         System.out.println("Volley: " + message);
+                        System.out.println(response);
+
                         try {
                             JSONObject jsonObjectAll = new JSONObject(response);
                             JSONArray jsonArray = jsonObjectAll.getJSONArray("offers");
@@ -873,9 +883,12 @@ public class SettingActivity  extends AppCompatActivity {
                             settingsPreferences.edit().putInt("numberOfOffers", 0).apply();
                         }
 
+                        s++;
 
-                        Intent intent = new Intent(MyApplication.getAppContext(), MainActivity.class);
-                        MyApplication.getAppContext().startActivity(intent);
+                        if(s==settingsPreferences.getInt("numberOfCheckedCategories",0)){
+                            Intent intent = new Intent(SettingActivity.this, MainActivity.class);
+                            startActivity(intent);
+                        }
                     }
 
                 }, new Response.ErrorListener() {
@@ -922,6 +935,11 @@ public class SettingActivity  extends AppCompatActivity {
             }
         };
         return stringRequest;
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
     }
 }
 

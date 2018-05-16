@@ -17,14 +17,13 @@ public class DetailActivity extends AppCompatActivity {
 
     SimpleDateFormat format;
 
-    SharedPreferences settingsPreferences;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_detail);
+        getSupportActionBar().setTitle("Datalabs");
 
-        settingsPreferences = PreferenceManager.getDefaultSharedPreferences(this);
 
         TextView txt_title = findViewById(R.id.txt_title);
         TextView txt_date = findViewById(R.id.txt_date);
@@ -40,5 +39,10 @@ public class DetailActivity extends AppCompatActivity {
 
 
 
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
     }
 }

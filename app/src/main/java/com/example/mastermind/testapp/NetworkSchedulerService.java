@@ -7,6 +7,7 @@ import android.app.job.JobParameters;
 import android.app.job.JobService;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 import android.support.v4.app.NotificationCompat;
@@ -52,22 +53,28 @@ import java.util.Map;
 public class NetworkSchedulerService extends JobService implements
         ConnectivityReceiver.ConnectivityReceiverListener {
 
+    BubblesManager bubblesManager;
     NotificationCompat.Builder notification;
     private static final int uniqueID = 45612;
     Date currentTime = new Date();
     Date lastUpdate;
     ArrayList<JobOffer> asyncOffers = new ArrayList<>();
     int notCount;
-    SharedPreferences settingsPreferences;
-    BubblesManager bubblesManager;
-    BubbleLayout bubbleView;
+    SharedPreferences settingsPreferences = PreferenceManager.getDefaultSharedPreferences(MyApplication.getAppContext());
+
+
+    ArrayList<BubbleLayout> bubbles;
+
     boolean bubbleInit = false;
+    boolean bubbleDel = false;
     NotificationManager nm;
     NotificationBadge mBadge;
     ArrayList<Integer> idArray = new ArrayList<>();
     String message = "";
     RequestQueue queue;
     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+
 
     private static final String TAG = NetworkSchedulerService.class.getSimpleName();
 
@@ -78,6 +85,7 @@ public class NetworkSchedulerService extends JobService implements
         super.onCreate();
         Log.i(TAG, "Service created");
         mConnectivityReceiver = new ConnectivityReceiver(this);
+
     }
 
 
@@ -93,10 +101,15 @@ public class NetworkSchedulerService extends JobService implements
     }
 
 
+
+
     @Override
     public boolean onStartJob(JobParameters params) {
         Log.i(TAG, "onStartJob" + mConnectivityReceiver);
         registerReceiver(mConnectivityReceiver, new IntentFilter("android.net.conn.CONNECTIVITY_CHANGE"));
+
+
+
         return true;
     }
 
@@ -107,17 +120,18 @@ public class NetworkSchedulerService extends JobService implements
         return true;
     }
 
+
     @Override
     public void onNetworkConnectionChanged(boolean isConnected) {
 
-        settingsPreferences = PreferenceManager.getDefaultSharedPreferences(MyApplication.getAppContext());
-        notCount = 0;
-        queue = Volley.newRequestQueue(MyApplication.getAppContext());
-
-
         String message = isConnected ? "Good! Connected to Internet" : "Sorry! Not connected to internet";
         Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
-        if(settingsPreferences.getBoolean("makeRequest",true) && isConnected){
+
+        notCount = 0;
+
+        queue = Volley.newRequestQueue(MyApplication.getAppContext());
+        if(isConnected && settingsPreferences.getBoolean("makeRequest",true)) {
+
             for (int j = 0; j < settingsPreferences.getInt("numberOfCheckedCategories", 0); j++) {
 
                 queue.add(volleySetCheckedCategories(String.valueOf(settingsPreferences.getInt("checkedCategoryId " + j, 0))));
@@ -131,18 +145,27 @@ public class NetworkSchedulerService extends JobService implements
 
 
     public int checkForOffers() {
+        boolean searchChecked = false;
         int notCount = 0;
         for (int i = 0; i < settingsPreferences.getInt("numberOfOffers", 0); i++) {
             System.out.println(settingsPreferences.getInt("numberOfOffers", 0));
+            System.out.println(settingsPreferences.getInt("numberOfCheckedCategories", 0));
             System.out.println(settingsPreferences.getLong("offerDate " + i,0) > settingsPreferences.getLong("lastSeenDate", 0));
             if (settingsPreferences.getLong("offerDate " + i,0) > settingsPreferences.getLong("lastSeenDate", 0)) {
-                notCount++;
+                for(int j = 0; j < settingsPreferences.getInt("numberOfCheckedCategories", 0); j++) {
+                    System.out.println(settingsPreferences.getInt("offerCatid " + i,0));
+                    System.out.println(settingsPreferences.getInt("checkedCategoryId "+j,0));
+                    if(settingsPreferences.getInt("offerCatid " + i,0)==settingsPreferences.getInt("checkedCategoryId "+j,0)) {
+                        notCount++;
 
+                    }
+                }
             }
 
             System.out.println(settingsPreferences.getLong("lastSeenDate", 0) + " at the end of alarmreceiver ");
 
         }
+
         return notCount;
     }
 
@@ -236,8 +259,13 @@ public class NetworkSchedulerService extends JobService implements
 
                             if (checkForOffers() > 0 && asyncOffers.get(0).getDate().getTime() > settingsPreferences.getLong("lastNotDate", 0)) {
 
+                                initializeBubblesManager();
+
+
                                 settingsPreferences.edit().putInt("numberOfUnseenOffers", checkForOffers()).apply();
                                 System.out.println(settingsPreferences.getInt("numberOfUnseenOffers", 0));
+
+
 
                                 notification = new NotificationCompat.Builder(MyApplication.getAppContext(), "notification");
                                 notification.setAutoCancel(true);
@@ -260,25 +288,16 @@ public class NetworkSchedulerService extends JobService implements
                                 nm = (NotificationManager) MyApplication.getAppContext().getSystemService(NOTIFICATION_SERVICE);
                                 nm.notify(uniqueID, notification.build());
 
-                                if (getBubbleView() == null ) {
 
-                                    initBubble();
-                                } else {
-                                    removeBubble(getBubbleView());
-                                    initBubble();
-                                }
 
 
                                 settingsPreferences.edit().putBoolean("makeRequest", false).apply();
                                 settingsPreferences.edit().putLong("lastNotDate", asyncOffers.get(0).getDate().getTime()).apply();
 
-
                             } else {
                                 Toast.makeText(MyApplication.getAppContext(), "There is some problem with the server", Toast.LENGTH_LONG);
                             }
                         }
-
-
 
                     }
 
@@ -313,7 +332,8 @@ public class NetworkSchedulerService extends JobService implements
                 }
             }
         }
-        ) {
+        )
+        {
             @Override
             protected Map<String, String> getParams() {
                 Map<String, String> params = new HashMap<>();
@@ -326,64 +346,54 @@ public class NetworkSchedulerService extends JobService implements
         return stringRequest;
     }
 
-    private void initBubble(){
+    //This method is executed to add a new bubble.
+    private void addNewBubble() {
+        BubbleLayout bubbleView = (BubbleLayout)LayoutInflater.from(MyApplication.getAppContext()).inflate(R.layout.bubble_layout, null);
+        mBadge =bubbleView.findViewById(R.id.badge);
+        mBadge.setNumber(checkForOffers());
 
-        bubblesManager = new BubblesManager.Builder(MyApplication.getAppContext())
+        bubbleView.setOnBubbleRemoveListener(new BubbleLayout.OnBubbleRemoveListener() {
+            @Override
+            public void onBubbleRemoved(BubbleLayout bubble) { }
+        });
+
+        //The Onclick Listener for the bubble has been set below.
+        bubbleView.setOnBubbleClickListener(new BubbleLayout.OnBubbleClickListener() {
+
+            @Override
+            public void onBubbleClick(BubbleLayout bubble) {
+
+                Toast.makeText(MyApplication.getAppContext(), "Clicked", Toast.LENGTH_SHORT).show();
+                Intent intentBubbleToMain = new Intent(MyApplication.getAppContext(), UnseenActivity.class);
+                intentBubbleToMain.putExtra("source", "alarm");
+                MyApplication.getAppContext().startActivity(intentBubbleToMain);
+                bubblesManager.removeBubble(bubble);
+
+                bubbleDel = true;
+                nm.cancel(uniqueID);
+            }
+        });
+        bubbleView.setShouldStickToWall(true);
+        bubblesManager.addBubble(bubbleView, 60, 20);
+    }
+
+    private void initializeBubblesManager() {
+        bubblesManager = new BubblesManager.Builder(this)
                 .setTrashLayout(R.layout.bubble_remove)
                 .setInitializationCallback(new OnInitializedCallback() {
                     @Override
                     public void onInitialized() {
                         addNewBubble();
                     }
-                }).build();
+                })
+                .build();
         bubblesManager.initialize();
-
     }
 
-    private void addNewBubble(){
-
-        bubbleView = (BubbleLayout) LayoutInflater.from(MyApplication.getAppContext())
-                .inflate(R.layout.bubble_layout,null);
-        mBadge = bubbleView.findViewById(R.id.badge);
-        mBadge.setNumber(checkForOffers());
-
-        bubbleView.setOnBubbleRemoveListener(new BubbleLayout.OnBubbleRemoveListener() {
-            @Override
-            public void onBubbleRemoved(BubbleLayout bubble) {
-                Toast.makeText(MyApplication.getAppContext(), "Removed", Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        bubbleView.setOnBubbleClickListener(new BubbleLayout.OnBubbleClickListener() {
-            @Override
-            public void onBubbleClick(BubbleLayout bubble) {
-                Toast.makeText(MyApplication.getAppContext(),"Clicked",Toast.LENGTH_SHORT).show();
-                Intent intentBubbleToMain = new Intent(MyApplication.getAppContext(),UnseenActivity.class);
-                intentBubbleToMain.putExtra("source","alarm");
-                MyApplication.getAppContext().startActivity(intentBubbleToMain);
-                removeBubble(bubble);
-                nm.cancel(uniqueID);
-
-            }
-        });
-
-
-
-        bubblesManager.addBubble(bubbleView,60,60);
-
-
-
-    }
-
-    public BubbleLayout getBubbleView(){
-        return bubbleView;
-    }
-
-    public void removeBubble(BubbleLayout bubbleView){
-        bubblesManager.removeBubble(bubbleView);
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
         bubblesManager.recycle();
     }
-
-
 }
 
