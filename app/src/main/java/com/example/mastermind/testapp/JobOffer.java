@@ -11,7 +11,12 @@ public class JobOffer implements Serializable {
 
     private int id;
     private int catid;
+    private String cattitle;
+    private int areaid;
+    private String areatitle;
     private String title;
+    private String link;
+    private String desc;
     private Date date;
     private String downloaded;
 
@@ -36,12 +41,52 @@ public class JobOffer implements Serializable {
         this.catid = catid;
     }
 
+    public String getCattitle() {
+        return cattitle;
+    }
+
+    public void setCattitle(String cattitle) {
+        this.cattitle = cattitle;
+    }
+
+    public int getAreaid() {
+        return areaid;
+    }
+
+    public void setAreaid(int areaid) {
+        this.areaid = areaid;
+    }
+
+    public String getAreatitle() {
+        return areatitle;
+    }
+
+    public void setAreatitle(String areatitle) {
+        this.areatitle = areatitle;
+    }
+
     public String getTitle() {
         return title;
     }
 
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    public String getLink() {
+        return link;
+    }
+
+    public void setLink(String link) {
+        this.link = link;
+    }
+
+    public String getDesc() {
+        return desc;
+    }
+
+    public void setDesc(String desc) {
+        this.desc = desc;
     }
 
     public Date getDate() {

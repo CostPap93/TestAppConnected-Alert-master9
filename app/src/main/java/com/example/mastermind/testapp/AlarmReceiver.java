@@ -63,13 +63,9 @@ import static android.content.Context.NOTIFICATION_SERVICE;
 public class AlarmReceiver extends BroadcastReceiver {
 
 
-    Date offerDB;
     NotificationCompat.Builder notification;
     private static final int uniqueID = 45612;
     NotificationManager nm;
-    Date currentTime = new Date();
-    Date lastUpdate;
-    ArrayList<BubbleLayout> bubbles =new ArrayList<>();
     int notCount;
 
     ArrayList<JobOffer> asyncOffers = new ArrayList<>();
@@ -81,8 +77,7 @@ public class AlarmReceiver extends BroadcastReceiver {
     String message = "";
     RequestQueue queue;
     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-    boolean bubbleInit = false;
-    boolean bubbleDel = false;
+
 
 
     @Override
@@ -91,23 +86,46 @@ public class AlarmReceiver extends BroadcastReceiver {
 
         notCount = 0;
 
-        queue = Volley.newRequestQueue(MyApplication.getAppContext());
+        if(queue==null) {
+            queue = Volley.newRequestQueue(MyApplication.getAppContext());
+
+        }
 
         if(isConn()) {
-            for (int j = 0; j < settingsPreferences.getInt("numberOfCheckedCategories", 0); j++) {
+//            if(Build.VERSION.SDK_INT>=23) {
                 initializeBubblesManager();
-                queue.add(volleySetCheckedCategories(String.valueOf(settingsPreferences.getInt("checkedCategoryId " + j, 0))));
-                //new TaskShowOffersFromCategories().execute(String.valueOf(settingsPreferences.getInt("checkedCategoryId " + j, 0)));
+//            }
+            for (int j = 0; j < settingsPreferences.getInt("numberOfCheckedCategories", 0); j++) {
+                for (int k = 0; k < settingsPreferences.getInt("numberOfCheckedAreas", 0); k++) {
 
+                    queue.add(volleySetCheckedCategories(String.valueOf(settingsPreferences.getInt("checkedCategoryId " + j, 0)),String.valueOf(settingsPreferences.getInt("checkedAreaId " + k, 0))));
+                //new TaskShowOffersFromCategories().execute(String.valueOf(settingsPreferences.getInt("checkedCategoryId " + j, 0)));
+                }
             }
 
         }else {
             settingsPreferences.edit().putBoolean("makeRequest", true).apply();
-
+            System.out.println("Job Scheduled");
+            scheduleJob();
         }
 
 
     }
+
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    private void scheduleJob() {
+        JobInfo myJob = new JobInfo.Builder(0, new ComponentName(MyApplication.getAppContext(), NetworkSchedulerService.class))
+                .setMinimumLatency(1000)
+                .setOverrideDeadline(2000)
+                .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
+                .setPersisted(true)
+                .build();
+
+        JobScheduler jobScheduler = (JobScheduler) MyApplication.getAppContext().getSystemService(Context.JOB_SCHEDULER_SERVICE);
+        jobScheduler.schedule(myJob);
+    }
+
+
 
 
 
@@ -133,10 +151,13 @@ public class AlarmReceiver extends BroadcastReceiver {
             System.out.println(settingsPreferences.getLong("offerDate " + i,0) > settingsPreferences.getLong("lastSeenDate", 0));
             if (settingsPreferences.getLong("offerDate " + i,0) > settingsPreferences.getLong("lastSeenDate", 0)) {
                 for(int j = 0; j < settingsPreferences.getInt("numberOfCheckedCategories", 0); j++) {
-                    System.out.println(settingsPreferences.getInt("offerCatid " + i,0));
-                    System.out.println(settingsPreferences.getInt("checkedCategoryId "+j,0));
-                    if(settingsPreferences.getInt("offerCatid " + i,0)==settingsPreferences.getInt("checkedCategoryId "+j,0)) {
-                        notCount++;
+                    for (int k = 0; k < settingsPreferences.getInt("numberOfCheckedCategories", 0); k++) {
+                        System.out.println(settingsPreferences.getInt("offerCatid " + i, 0));
+                        System.out.println(settingsPreferences.getInt("checkedCategoryId " + j, 0));
+                        if (settingsPreferences.getInt("offerCatid " + i, 0) == settingsPreferences.getInt("checkedCategoryId " + j, 0) && settingsPreferences.getInt("offerAreaid " + i, 0) == settingsPreferences.getInt("checkedAreaId " + k, 0)) {
+                            notCount++;
+
+                        }
                     }
                 }
             }
@@ -148,8 +169,8 @@ public class AlarmReceiver extends BroadcastReceiver {
         return notCount;
     }
 
-    public StringRequest volleySetCheckedCategories(final String param) {
-        String url = "http://10.0.2.2/android/jobAds.php?";
+    public StringRequest volleySetCheckedCategories(final String param,final String param2) {
+        String url = "http://10.0.2.2/android/jobAds.php";
 
         // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
@@ -237,11 +258,12 @@ public class AlarmReceiver extends BroadcastReceiver {
 
 
                             if (checkForOffers() > 0 && asyncOffers.get(0).getDate().getTime() > settingsPreferences.getLong("lastNotDate", 0)) {
-
-                                addNewBubble();
-
+//                                if(Build.VERSION.SDK_INT>=23) {
+                                    addNewBubble();
+//                                }
                                 settingsPreferences.edit().putInt("numberOfUnseenOffers", checkForOffers()).apply();
                                 System.out.println(settingsPreferences.getInt("numberOfUnseenOffers", 0));
+
 
                                 notification = new NotificationCompat.Builder(MyApplication.getAppContext(), "notification");
                                 notification.setAutoCancel(true);
@@ -257,9 +279,8 @@ public class AlarmReceiver extends BroadcastReceiver {
 
 
                                 Intent intentBackToMain = new Intent(MyApplication.getAppContext(), UnseenActivity.class);
-                                intentBackToMain.putExtra("source", "alarm");
                                 PendingIntent pendingIntent = PendingIntent.getActivity(MyApplication.getAppContext(), 0, intentBackToMain, PendingIntent.FLAG_UPDATE_CURRENT);
-                                notification.setContentTitle("You have " + checkForOffers() + " unseen offers!!");
+                                notification.setContentTitle("You have " + checkForOffers() + " unseen offers!!Alarm Receiver");
                                 notification.setContentIntent(pendingIntent);
 
                                 nm = (NotificationManager) MyApplication.getAppContext().getSystemService(NOTIFICATION_SERVICE);
@@ -312,8 +333,8 @@ public class AlarmReceiver extends BroadcastReceiver {
             @Override
             protected Map<String, String> getParams() {
                 Map<String, String> params = new HashMap<>();
-                params.put("action", "showOffersFromCategory");
                 params.put("jacat_id",param);
+                params.put("jaarea_id",param2);
 
                 return params;
             }
@@ -330,7 +351,6 @@ public class AlarmReceiver extends BroadcastReceiver {
         bubbleView.setOnBubbleRemoveListener(new BubbleLayout.OnBubbleRemoveListener() {
             @Override
             public void onBubbleRemoved(BubbleLayout bubble) {
-
             }
         });
 
@@ -342,17 +362,17 @@ public class AlarmReceiver extends BroadcastReceiver {
 
                 Toast.makeText(MyApplication.getAppContext(), "Clicked", Toast.LENGTH_SHORT).show();
                 Intent intentBubbleToMain = new Intent(MyApplication.getAppContext(), UnseenActivity.class);
+                intentBubbleToMain.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 intentBubbleToMain.putExtra("source", "alarm");
+                intentBubbleToMain.putExtra("asyncOffers",asyncOffers);
                 MyApplication.getAppContext().startActivity(intentBubbleToMain);
                 bubblesManager.removeBubble(bubble);
 
-                bubbleDel = true;
                 nm.cancel(uniqueID);
             }
         });
         bubbleView.setShouldStickToWall(true);
         bubblesManager.addBubble(bubbleView, 60, 20);
-        bubbles.add(bubbleView);
     }
 
     private void initializeBubblesManager() {

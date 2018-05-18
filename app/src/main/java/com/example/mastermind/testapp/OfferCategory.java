@@ -9,7 +9,7 @@ public class OfferCategory {
     private int catid;
     private String title;
 
-    public OfferCategory(int catid,String title,boolean checked){
+    public OfferCategory(int catid,String title){
         this.catid=catid;
         this.title = title;
     }

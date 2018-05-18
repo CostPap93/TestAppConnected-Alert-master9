@@ -22,8 +22,7 @@ public class JobOfferAdapter extends BaseAdapter{
     Context context;
     ArrayList<JobOffer> offers = new ArrayList<>();
     SharedPreferences settingsPreferences;
-    CheckBox checkBox;
-    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
 
 
     public JobOfferAdapter(Context context, ArrayList<JobOffer> offers) {
@@ -60,10 +59,13 @@ public class JobOfferAdapter extends BaseAdapter{
             view = inflater.inflate(R.layout.joboffer_list_item, null);
         }
         TextView txt_offertitle = view.findViewById(R.id.txtv_offertitle);
-        TextView txt_offerdate = view.findViewById(R.id.txtv_offerdate);
+        TextView txt_offercategory = view.findViewById(R.id.txtv_offercategory);
+        TextView txt_offerarea = view.findViewById(R.id.txtv_offerarea);
+
 
         txt_offertitle.setText(offers.get(i).getTitle());
-        txt_offerdate.setText(format.format(offers.get(i).getDate()));
+        txt_offercategory.setText(offers.get(i).getCattitle());
+        txt_offerarea.setText(offers.get(i).getAreatitle());
 
 
 

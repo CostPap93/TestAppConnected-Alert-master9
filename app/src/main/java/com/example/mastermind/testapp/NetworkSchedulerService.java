@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.preference.PreferenceManager;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
@@ -56,17 +57,11 @@ public class NetworkSchedulerService extends JobService implements
     BubblesManager bubblesManager;
     NotificationCompat.Builder notification;
     private static final int uniqueID = 45612;
-    Date currentTime = new Date();
-    Date lastUpdate;
     ArrayList<JobOffer> asyncOffers = new ArrayList<>();
     int notCount;
     SharedPreferences settingsPreferences = PreferenceManager.getDefaultSharedPreferences(MyApplication.getAppContext());
 
 
-    ArrayList<BubbleLayout> bubbles;
-
-    boolean bubbleInit = false;
-    boolean bubbleDel = false;
     NotificationManager nm;
     NotificationBadge mBadge;
     ArrayList<Integer> idArray = new ArrayList<>();
@@ -117,6 +112,7 @@ public class NetworkSchedulerService extends JobService implements
     public boolean onStopJob(JobParameters params) {
         Log.i(TAG, "onStopJob");
         unregisterReceiver(mConnectivityReceiver);
+        queue.stop();
         return true;
     }
 
@@ -129,14 +125,21 @@ public class NetworkSchedulerService extends JobService implements
 
         notCount = 0;
 
-        queue = Volley.newRequestQueue(MyApplication.getAppContext());
+        if(queue == null) {
+            queue = Volley.newRequestQueue(MyApplication.getAppContext());
+        }
+        //            if(Build.VERSION.SDK_INT>=23) {
+
+//            }
         if(isConnected && settingsPreferences.getBoolean("makeRequest",true)) {
-
+            initializeBubblesManager();
             for (int j = 0; j < settingsPreferences.getInt("numberOfCheckedCategories", 0); j++) {
+                for (int k = 0; k < settingsPreferences.getInt("numberOfCheckedAreas", 0); k++) {
 
-                queue.add(volleySetCheckedCategories(String.valueOf(settingsPreferences.getInt("checkedCategoryId " + j, 0))));
-                //new TaskShowOffersFromCategories().execute(String.valueOf(settingsPreferences.getInt("checkedCategoryId " + j, 0)));
+                    queue.add(volleySetCheckedCategories(String.valueOf(settingsPreferences.getInt("checkedCategoryId " + j, 0)),String.valueOf(settingsPreferences.getInt("checkedAreaId " + k, 0))));
+                    //new TaskShowOffersFromCategories().execute(String.valueOf(settingsPreferences.getInt("checkedCategoryId " + j, 0)));
 
+                }
             }
         }
 
@@ -153,11 +156,13 @@ public class NetworkSchedulerService extends JobService implements
             System.out.println(settingsPreferences.getLong("offerDate " + i,0) > settingsPreferences.getLong("lastSeenDate", 0));
             if (settingsPreferences.getLong("offerDate " + i,0) > settingsPreferences.getLong("lastSeenDate", 0)) {
                 for(int j = 0; j < settingsPreferences.getInt("numberOfCheckedCategories", 0); j++) {
-                    System.out.println(settingsPreferences.getInt("offerCatid " + i,0));
-                    System.out.println(settingsPreferences.getInt("checkedCategoryId "+j,0));
-                    if(settingsPreferences.getInt("offerCatid " + i,0)==settingsPreferences.getInt("checkedCategoryId "+j,0)) {
-                        notCount++;
+                    for (int k = 0; k < settingsPreferences.getInt("numberOfCheckedCategories", 0); k++) {
+                        System.out.println(settingsPreferences.getInt("offerCatid " + i, 0));
+                        System.out.println(settingsPreferences.getInt("checkedCategoryId " + j, 0));
+                        if (settingsPreferences.getInt("offerCatid " + i, 0) == settingsPreferences.getInt("checkedCategoryId " + j, 0) && settingsPreferences.getInt("offerAreaid " + i, 0) == settingsPreferences.getInt("checkedAreaId " + k, 0)) {
+                            notCount++;
 
+                        }
                     }
                 }
             }
@@ -169,7 +174,7 @@ public class NetworkSchedulerService extends JobService implements
         return notCount;
     }
 
-    public StringRequest volleySetCheckedCategories(final String param) {
+    public StringRequest volleySetCheckedCategories(final String param,final String param2) {
         String url = "http://10.0.2.2/android/jobAds.php?";
 
         // Request a string response from the provided URL.
@@ -259,12 +264,11 @@ public class NetworkSchedulerService extends JobService implements
 
                             if (checkForOffers() > 0 && asyncOffers.get(0).getDate().getTime() > settingsPreferences.getLong("lastNotDate", 0)) {
 
-                                initializeBubblesManager();
-
-
+//                                if(Build.VERSION.SDK_INT>=23) {
+                                    addNewBubble();
+//                                }
                                 settingsPreferences.edit().putInt("numberOfUnseenOffers", checkForOffers()).apply();
                                 System.out.println(settingsPreferences.getInt("numberOfUnseenOffers", 0));
-
 
 
                                 notification = new NotificationCompat.Builder(MyApplication.getAppContext(), "notification");
@@ -280,9 +284,8 @@ public class NetworkSchedulerService extends JobService implements
                                 notification.setBadgeIconType(NotificationCompat.BADGE_ICON_SMALL);
 
                                 Intent intentBackToMain = new Intent(MyApplication.getAppContext(), UnseenActivity.class);
-                                intentBackToMain.putExtra("source", "alarm");
                                 PendingIntent pendingIntent = PendingIntent.getActivity(MyApplication.getAppContext(), 0, intentBackToMain, PendingIntent.FLAG_UPDATE_CURRENT);
-                                notification.setContentTitle("You have " + checkForOffers() + " unseen offers!!");
+                                notification.setContentTitle("You have " + checkForOffers() + " unseen offers!!Network Schedule");
                                 notification.setContentIntent(pendingIntent);
 
                                 nm = (NotificationManager) MyApplication.getAppContext().getSystemService(NOTIFICATION_SERVICE);
@@ -337,8 +340,8 @@ public class NetworkSchedulerService extends JobService implements
             @Override
             protected Map<String, String> getParams() {
                 Map<String, String> params = new HashMap<>();
-                params.put("action", "showOffersFromCategory");
                 params.put("jacat_id",param);
+                params.put("jaarea_id",param2);
 
                 return params;
             }
@@ -354,7 +357,8 @@ public class NetworkSchedulerService extends JobService implements
 
         bubbleView.setOnBubbleRemoveListener(new BubbleLayout.OnBubbleRemoveListener() {
             @Override
-            public void onBubbleRemoved(BubbleLayout bubble) { }
+            public void onBubbleRemoved(BubbleLayout bubble) {
+            }
         });
 
         //The Onclick Listener for the bubble has been set below.
@@ -365,11 +369,10 @@ public class NetworkSchedulerService extends JobService implements
 
                 Toast.makeText(MyApplication.getAppContext(), "Clicked", Toast.LENGTH_SHORT).show();
                 Intent intentBubbleToMain = new Intent(MyApplication.getAppContext(), UnseenActivity.class);
-                intentBubbleToMain.putExtra("source", "alarm");
+                intentBubbleToMain.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 MyApplication.getAppContext().startActivity(intentBubbleToMain);
                 bubblesManager.removeBubble(bubble);
 
-                bubbleDel = true;
                 nm.cancel(uniqueID);
             }
         });
@@ -383,17 +386,11 @@ public class NetworkSchedulerService extends JobService implements
                 .setInitializationCallback(new OnInitializedCallback() {
                     @Override
                     public void onInitialized() {
-                        addNewBubble();
                     }
                 })
                 .build();
         bubblesManager.initialize();
     }
 
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        bubblesManager.recycle();
-    }
 }
 

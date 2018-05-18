@@ -114,12 +114,14 @@ public class MainActivity extends AppCompatActivity  {
         offers = new ArrayList<>();
         btn_back = findViewById(R.id.btn_back);
         format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        queue = Volley.newRequestQueue(this);
+
 
 
         settingsPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         System.out.println(settingsPreferences.getInt("numberOfCategories", 0) == 0);
         System.out.println(settingsPreferences.getInt("numberOfCheckedCategories", 0) == 0);
+        System.out.println(settingsPreferences.getInt("numberOfAreas", 0) == 0);
+        System.out.println(settingsPreferences.getInt("numberOfCheckedAreas", 0) == 0);
 
 
         System.out.println(settingsPreferences.getBoolean("checkIsChanged", false));
@@ -130,7 +132,12 @@ public class MainActivity extends AppCompatActivity  {
                 JobOffer jobOffer = new JobOffer();
                 jobOffer.setId(settingsPreferences.getInt("offerId " + i, 0));
                 jobOffer.setCatid(settingsPreferences.getInt("offerCatid " + i, 0));
+                jobOffer.setCattitle(settingsPreferences.getString("offerCattitle " + i, ""));
+                jobOffer.setAreaid(settingsPreferences.getInt("offerAreaid " + i, 0));
+                jobOffer.setAreatitle(settingsPreferences.getString("offerAreatitle " + i, ""));
                 jobOffer.setTitle(settingsPreferences.getString("offerTitle " + i, ""));
+                jobOffer.setLink(settingsPreferences.getString("offerLink " + i, ""));
+                jobOffer.setDesc(settingsPreferences.getString("offerDesc " + i, ""));
                 jobOffer.setDate(new Date(settingsPreferences.getLong("offerDate " + i, 0)));
                 jobOffer.setDownloaded(settingsPreferences.getString("offerDownloaded " + i, ""));
                 System.out.println(jobOffer.getTitle()+" Is it empty");
@@ -138,12 +145,18 @@ public class MainActivity extends AppCompatActivity  {
 
             }
 
-        System.out.println(offers.toString());
+        for (int i = 0; i < settingsPreferences.getInt("numberOfOffers", 0); i++) {
+                System.out.println(offers.get(i).getTitle());
+                System.out.println(offers.get(i).getId());
+                System.out.println(offers.get(i).getCattitle());
+                System.out.println(offers.get(i).getAreatitle());
+                System.out.println(offers.get(i).getDate().toString());
+        }
         JobOfferAdapter jobOfferAdapter = new JobOfferAdapter(getApplicationContext(), offers);
         lv.setAdapter(jobOfferAdapter);
         System.out.println(settingsPreferences.getLong("interval",0));
 
-        scheduleJob();
+
 
 
 
@@ -175,19 +188,6 @@ public class MainActivity extends AppCompatActivity  {
 
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    private void scheduleJob() {
-        JobInfo myJob = new JobInfo.Builder(0, new ComponentName(MyApplication.getAppContext(), NetworkSchedulerService.class))
-                .setMinimumLatency(1000)
-                .setOverrideDeadline(2000)
-                .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
-                .setPersisted(true)
-                .build();
-
-        JobScheduler jobScheduler = (JobScheduler) MyApplication.getAppContext().getSystemService(Context.JOB_SCHEDULER_SERVICE);
-        jobScheduler.schedule(myJob);
-    }
-
 
 
 
@@ -211,12 +211,19 @@ public class MainActivity extends AppCompatActivity  {
 
     public void RefreshOperation() {
 
+        if(queue == null) {
+            queue = Volley.newRequestQueue(this);
+        }
+
         for (int v = 0; v < (settingsPreferences.getInt("numberOfCheckedCategories", 0)); v++) {
-            if (settingsPreferences.getInt("checkedCategoryId " + v, 0) != 0) {
-                System.out.println(settingsPreferences.getInt("checkedCategoryId " + v, 0) + "Before the task show for the first time");
-                System.out.println(settingsPreferences.getString("checkedCategoryTitle " + v, ""));
-                //new TaskShowOffersFromCategories().execute(String.valueOf(settingsPreferences.getInt("checkedCategoryId " + v, 0)));
-                queue.add(volleySetCheckedCategories(String.valueOf(settingsPreferences.getInt("checkedCategoryId " + v, 0))));
+            for (int x = 0; x < (settingsPreferences.getInt("numberOfCheckedCategories", 0)); x++) {
+                if (settingsPreferences.getInt("checkedCategoryId " + v, 0) != 0 && settingsPreferences.getInt("checkedAreaId " + x, 0) != 0) {
+                    System.out.println(settingsPreferences.getInt("checkedCategoryId " + v, 0) + "Before the task show for the first time");
+                    System.out.println(settingsPreferences.getString("checkedCategoryTitle " + v, ""));
+                    //new TaskShowOffersFromCategories().execute(String.valueOf(settingsPreferences.getInt("checkedCategoryId " + v, 0)));
+                    queue.add(volleySetCheckedCategories(String.valueOf(settingsPreferences.getInt("checkedCategoryId " + v, 0)),String.valueOf(settingsPreferences.getInt("checkedAreaId " + x, 0))));
+
+                }
             }
         }
 
@@ -257,7 +264,7 @@ public class MainActivity extends AppCompatActivity  {
         return super.onOptionsItemSelected(item);
     }
 
-    public StringRequest volleySetCheckedCategories(final String param) {
+    public StringRequest volleySetCheckedCategories(final String param,final String param2) {
         String url = "http://10.0.2.2/android/jobAds.php?";
 
 
@@ -430,8 +437,8 @@ public class MainActivity extends AppCompatActivity  {
             @Override
             protected Map<String, String> getParams() {
                 Map<String, String> params = new HashMap<>();
-                params.put("action", "showOffersFromCategory");
                 params.put("jacat_id",param);
+                params.put("jaarea_id",param2);
 
                 return params;
             }
@@ -451,5 +458,6 @@ public class MainActivity extends AppCompatActivity  {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        queue.stop();
     }
 }

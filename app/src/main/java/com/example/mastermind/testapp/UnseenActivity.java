@@ -66,7 +66,6 @@ public class UnseenActivity  extends AppCompatActivity {
     ListView lv;
     DateFormat format;
     Button btn_back;
-    RequestQueue queue;
 
 
 
@@ -81,7 +80,6 @@ public class UnseenActivity  extends AppCompatActivity {
         offers = new ArrayList<>();
         btn_back = findViewById(R.id.btn_back);
         format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        queue = Volley.newRequestQueue(this);
 
 
         settingsPreferences = PreferenceManager.getDefaultSharedPreferences(this);
@@ -109,7 +107,6 @@ public class UnseenActivity  extends AppCompatActivity {
 
             }
 
-        settingsPreferences.edit().putInt("numberOfUnseenOffers",0).apply();
 
         System.out.println(offers.toString());
         JobOfferAdapter jobOfferAdapter = new JobOfferAdapter(getApplicationContext(), offers);

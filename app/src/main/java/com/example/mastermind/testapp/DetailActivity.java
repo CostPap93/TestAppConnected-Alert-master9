@@ -28,13 +28,13 @@ public class DetailActivity extends AppCompatActivity {
         TextView txt_title = findViewById(R.id.txt_title);
         TextView txt_date = findViewById(R.id.txt_date);
         TextView txt_description = findViewById(R.id.txt_description);
-        format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        format = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
 
         JobOffer jobOffer = (JobOffer) getIntent().getSerializableExtra("jobOffer");
 
 
         txt_title.setText(jobOffer.getTitle());
-        txt_date.setText(format.format(jobOffer.getDate()));
+        txt_date.setText("Δημοσιεύτηκε: " +format.format(jobOffer.getDate()));
         txt_description.setText(String.valueOf(jobOffer.getCatid()));
 
 
