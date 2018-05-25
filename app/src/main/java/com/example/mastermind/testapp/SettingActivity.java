@@ -1,9 +1,11 @@
 package com.example.mastermind.testapp;
 
 import android.app.AlarmManager;
+import android.app.AlertDialog;
 import android.app.PendingIntent;
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
@@ -87,9 +89,11 @@ public class SettingActivity  extends AppCompatActivity {
     ArrayList<Integer> idArray = new ArrayList<>();
     SimpleDateFormat format;
     PendingIntent pendingIntentA;
+    private int selected;
 
     RequestQueue queue;
-    int t=0,s=0;
+    int t = 0, s = 0;
+    String areasIds, categoriesIds;
 
 
     @Override
@@ -99,8 +103,8 @@ public class SettingActivity  extends AppCompatActivity {
         getSupportActionBar().setTitle("Datalabs");
         settingsPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         checkBox = findViewById(R.id.chbox_category);
-        lv_categories= findViewById(R.id.lv_categories);
-        lv_areas= findViewById(R.id.lv_areas);
+        lv_categories = findViewById(R.id.lv_categories);
+        lv_areas = findViewById(R.id.lv_areas);
 
         btnSave = findViewById(R.id.btn_save);
         btnCancel = findViewById(R.id.btn_cancel);
@@ -114,7 +118,27 @@ public class SettingActivity  extends AppCompatActivity {
         areas = new ArrayList<>();
         format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-        if(queue ==null) {
+        areasIds = "";
+        categoriesIds = "";
+
+        for (int i = 0; i < settingsPreferences.getInt("numberOfCheckedCategories", 0); i++) {
+            if (categoriesIds.equals("")) {
+                categoriesIds += settingsPreferences.getInt("checkedCategoryId " + i, 0);
+            } else {
+                categoriesIds += "," + settingsPreferences.getInt("checkedCategoryId " + i, 0);
+            }
+        }
+
+        for (int i = 0; i < settingsPreferences.getInt("numberOfCheckedAreas", 0); i++) {
+            if (areasIds.equals("")) {
+                areasIds += settingsPreferences.getInt("checkedAreaId " + i, 0);
+            } else {
+                areasIds += "," + settingsPreferences.getInt("checkedAreaId " + i, 0);
+            }
+        }
+
+
+        if (queue == null) {
             queue = Volley.newRequestQueue(this);
         }
 
@@ -128,7 +152,7 @@ public class SettingActivity  extends AppCompatActivity {
                 category.setCatid(settingsPreferences.getInt("offerCategoryId " + i, 0));
                 category.setTitle(settingsPreferences.getString("offerCategoryTitle " + i, ""));
                 categories.add(category);
-                System.out.println(categories.get(i).getTitle()+"checkBoxAdapter");
+                System.out.println(categories.get(i).getTitle() + "checkBoxAdapter");
             }
             CheckBoxAdapter checkBoxAdapter = new CheckBoxAdapter(getApplicationContext(), categories);
 
@@ -145,7 +169,7 @@ public class SettingActivity  extends AppCompatActivity {
                 area.setAreaid(settingsPreferences.getInt("offerAreaId " + i, 0));
                 area.setTitle(settingsPreferences.getString("offerAreaTitle " + i, ""));
                 areas.add(area);
-                System.out.println(areas.get(i).getTitle()+"checkBoxAdapter");
+                System.out.println(areas.get(i).getTitle() + "checkBoxAdapter");
             }
             CheckBoxAreaAdapter checkBoxAreaAdapter = new CheckBoxAreaAdapter(getApplicationContext(), areas);
 
@@ -165,8 +189,8 @@ public class SettingActivity  extends AppCompatActivity {
         }
 
 
-
     }
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -197,12 +221,15 @@ public class SettingActivity  extends AppCompatActivity {
 
 
     public void btnSaveClicked(View view) throws ExecutionException, InterruptedException {
+
         CheckBox checkBox;
         offerCategories = new ArrayList<>();
         offerAreas = new ArrayList<>();
 
         OfferCategory offerCategory;
         OfferArea offerArea;
+        areasIds = "";
+        categoriesIds ="";
 
         if(isConn()) {
 
@@ -250,14 +277,35 @@ public class SettingActivity  extends AppCompatActivity {
 
                 start();
 
-
+                int r =0;
                 for (OfferCategory oc : offerCategories) {
-                    for (OfferArea oa : offerAreas) {
-                        System.out.println(oc.getCatid() + "Save");
-                        //new TaskShowOffersFromCategories().execute(String.valueOf(settingsPreferences.getInt("checkedCategoryId " + v, 0))).get();
-                        queue.add(volleySaveOffers(String.valueOf(oc.getCatid()), String.valueOf(oa.getAreaid())));
+                    if (r < offerCategories.size() - 1) {
+                        categoriesIds += oc.getCatid() + ",";
+                        r++;
+                    } else {
+                        categoriesIds += oc.getCatid();
+                        r++;
                     }
+
                 }
+                System.out.println(categoriesIds);
+                int x = 0;
+                for (OfferArea oa : offerAreas) {
+                    if (x < offerAreas.size() - 1) {
+                        areasIds += oa.getAreaid() + ",";
+                        x++;
+                    } else {
+                        areasIds += oa.getAreaid();
+                        x++;
+                    }
+
+                }
+
+                System.out.println(categoriesIds);
+                System.out.println(areasIds);
+                queue.add(volleySaveOffers(categoriesIds,areasIds));
+
+
             }else if(offerCategories.isEmpty()){
                 Toast.makeText(MyApplication.getAppContext(), "You have to choose at least one category", Toast.LENGTH_LONG).show();
             }else if(offerAreas.isEmpty()){
@@ -278,8 +326,9 @@ public class SettingActivity  extends AppCompatActivity {
     }
 
     public void btnResetClicked(View view) throws ExecutionException, InterruptedException {
-
-        if(isConn()) {
+        areasIds = "";
+        categoriesIds = "";
+        if (isConn()) {
             cancel();
 
             volleySetDefault();
@@ -300,132 +349,10 @@ public class SettingActivity  extends AppCompatActivity {
             }*/
             settingsPreferences.edit().putLong("interval", 6000).apply();
             start();
-        }else {
+        } else {
             Toast.makeText(SettingActivity.this, "You Have To Be Connected To Reset", Toast.LENGTH_LONG).show();
         }
     }
-
-  /*  public class TaskShowOffersFromCategories extends AsyncTask<String, Integer, ArrayList<JobOffer>> {
-
-        ArrayList<JobOffer> fiveOffers = new ArrayList<>();
-
-
-        protected void onPreExecute() {
-
-
-            super.onPreExecute();
-
-        }
-
-        @Override
-        protected void onPostExecute(ArrayList<JobOffer> fiveOffers) {
-            super.onPostExecute(fiveOffers);
-
-            if(fiveOffers!= null) {
-
-                for (int j = 0; j < 5; j++) {
-                    settingsPreferences.edit().remove("offerId " + j).apply();
-                    settingsPreferences.edit().remove("offerCatid " + j).apply();
-                    settingsPreferences.edit().remove("offerTitle " + j).apply();
-                    settingsPreferences.edit().remove("offerDate " + j).apply();
-                    settingsPreferences.edit().remove("offerDownloaded " + j).apply();
-                }
-
-                for (int i = 0; i < fiveOffers.size(); i++) {
-                    if (i < 5) {
-
-                        settingsPreferences.edit().putInt("offerId " + i, fiveOffers.get(i).getId()).apply();
-                        settingsPreferences.edit().putInt("offerCatid " + i, fiveOffers.get(i).getCatid()).apply();
-                        settingsPreferences.edit().putString("offerTitle " + i, fiveOffers.get(i).getTitle()).apply();
-                        settingsPreferences.edit().putLong("offerDate " + i, fiveOffers.get(i).getDate().getTime()).apply();
-                        settingsPreferences.edit().putString("offerDownloaded " + i, fiveOffers.get(i).getDownloaded()).apply();
-
-                        System.out.println(settingsPreferences.getLong("offerDate " + i, 0));
-                        System.out.println(settingsPreferences.getString("offerTitle " + i, ""));
-                        settingsPreferences.edit().putInt("numberOfOffers", fiveOffers.size()).apply();
-                    } else
-                        settingsPreferences.edit().putInt("numberOfOffers", 5).apply();
-
-                }
-                settingsPreferences.edit().putLong("lastSeenDate", fiveOffers.get(0).getDate().getTime()).apply();
-                System.out.println(settingsPreferences.getLong("lastSeenDate", 0));
-                Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-                startActivity(intent);
-
-            }else{
-                Toast.makeText(MyApplication.getAppContext(),"There is some problem with the server",Toast.LENGTH_LONG);
-            }
-
-
-        }
-
-        @Override
-        protected ArrayList<JobOffer> doInBackground(String... params) {
-
-            Map<String, String> postParam = new HashMap<>();
-            postParam.put("action", "showOffersFromCategory");
-            postParam.put("jacat_id", params[0]);
-
-            try {
-                String jsonString = m_AccessServiceAPI.getJSONStringWithParam_POST("http://10.0.2.2/android/jobAds.php?", postParam);
-                if(jsonString.equals("")){
-                    return null;
-                }
-                JSONObject jsonObjectAll = new JSONObject(jsonString);
-                JSONArray jsonArray = jsonObjectAll.getJSONArray("offers");
-                int i = 0;
-
-                while (i < jsonArray.length() && i < 5) {
-
-
-                    JSONObject jsonObjectCategory = jsonArray.getJSONObject(i);
-
-                    JobOffer offer = new JobOffer();
-                    offer.setId(Integer.valueOf(jsonObjectCategory.getString("jad_id")));
-                    offer.setCatid(Integer.valueOf(jsonObjectCategory.getString("jad_catid")));
-                    offer.setTitle(jsonObjectCategory.getString("jad_title"));
-                    offer.setDate(format.parse(jsonObjectCategory.getString("jad_date")));
-                    offer.setDownloaded(jsonObjectCategory.getString("jad_downloaded"));
-                    System.out.println(offer.getTitle() + " first time");
-
-                    asyncOffers.add(offer);
-
-
-                    Collections.sort(asyncOffers, new Comparator<JobOffer>() {
-                        @Override
-                        public int compare(JobOffer jobOffer, JobOffer t1) {
-                            if (jobOffer.getDate().getTime() - t1.getDate().getTime() < 0)
-                                return 1;
-                            else if (jobOffer.getDate().getTime() - t1.getDate().getTime() == 0)
-                                return 0;
-                            else
-                                return -1;
-                        }
-                    });
-                    for (int x = 0; x < asyncOffers.size(); x++) {
-                        System.out.println(asyncOffers.get(x).getTitle());
-                    }
-
-                    i++;
-
-                }
-
-            } catch (JSONException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (ParseException e) {
-                e.printStackTrace();
-            }
-            return asyncOffers;
-        }
-
-        @Override
-        protected void onProgressUpdate(Integer... values) {
-            super.onProgressUpdate(values);
-        }
-    }*/
-
 
     public boolean isConn() {
         ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -444,7 +371,7 @@ public class SettingActivity  extends AppCompatActivity {
 
         Intent alarmIntent = new Intent(SettingActivity.this, AlarmReceiver.class);
         pendingIntentA = PendingIntent.getBroadcast(SettingActivity.this, 0, alarmIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-        manager.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), 1000000, pendingIntentA);
+        manager.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), settingsPreferences.getLong("interval", 0), pendingIntentA);
 
         Toast.makeText(this, "Alarm Set", Toast.LENGTH_SHORT).show();
     }
@@ -452,7 +379,7 @@ public class SettingActivity  extends AppCompatActivity {
     public void cancel() {
         Intent alarmIntent = new Intent(SettingActivity.this, AlarmReceiver.class);
         AlarmManager manager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-        manager.cancel(PendingIntent.getBroadcast(SettingActivity.this,0,alarmIntent,PendingIntent.FLAG_UPDATE_CURRENT));
+        manager.cancel(PendingIntent.getBroadcast(SettingActivity.this, 0, alarmIntent, PendingIntent.FLAG_UPDATE_CURRENT));
         Toast.makeText(this, "Alarm Canceled", Toast.LENGTH_SHORT).show();
     }
 
@@ -465,8 +392,8 @@ public class SettingActivity  extends AppCompatActivity {
         finish();
     }
 
-    public StringRequest volleyUpdateDefault(){
-        String url ="http://10.0.2.2/android/jobOfferCategories.php?";
+    public StringRequest volleyUpdateDefault() {
+        String url = "http://10.0.2.2/android/jobOfferCategories.php?";
 
         // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
@@ -475,7 +402,6 @@ public class SettingActivity  extends AppCompatActivity {
                     public void onResponse(String response) {
                         System.out.println(response);
                         ArrayList<OfferCategory> categoriesRefresh = new ArrayList<>();
-
 
 
                         // Display the first 500 characters of the response string.
@@ -500,10 +426,10 @@ public class SettingActivity  extends AppCompatActivity {
                                     category.setCatid(settingsPreferences.getInt("offerCategoryId " + i, 0));
                                     category.setTitle(settingsPreferences.getString("offerCategoryTitle " + i, ""));
                                     categoriesRefresh.add(category);
-                                    System.out.println(categoriesRefresh.get(i).getTitle()+"checkBoxAdapter");
+                                    System.out.println(categoriesRefresh.get(i).getTitle() + "checkBoxAdapter");
                                 }
 
-                                CheckBoxAdapter checkBoxAdapter= new CheckBoxAdapter(getApplicationContext(), categoriesRefresh);
+                                CheckBoxAdapter checkBoxAdapter = new CheckBoxAdapter(getApplicationContext(), categoriesRefresh);
                                 lv_categories.setAdapter(checkBoxAdapter);
 
 
@@ -517,7 +443,7 @@ public class SettingActivity  extends AppCompatActivity {
                     }
                 }, new Response.ErrorListener() {
             @Override
-            public void onErrorResponse (VolleyError error){
+            public void onErrorResponse(VolleyError error) {
 
                 if (error instanceof TimeoutError || error instanceof NoConnectionError) {
                     message = "TimeOutError";
@@ -540,10 +466,10 @@ public class SettingActivity  extends AppCompatActivity {
                     // Indicates that the server response could not be parsed
 
                 }
-                System.out.println("Volley: "+ message);
-                if(!message.equals("")){
-                    Toast.makeText(SettingActivity.this,"There is some problem with the server ("+message+")",Toast.LENGTH_LONG).show();
-                    Intent intentError = new Intent(SettingActivity.this,SettingActivity.class);
+                System.out.println("Volley: " + message);
+                if (!message.equals("")) {
+                    Toast.makeText(SettingActivity.this, "There is some problem with the server (" + message + ")", Toast.LENGTH_LONG).show();
+                    Intent intentError = new Intent(SettingActivity.this, SettingActivity.class);
                     startActivity(intentError);
                 }
             }
@@ -552,8 +478,8 @@ public class SettingActivity  extends AppCompatActivity {
         return stringRequest;
     }
 
-    public StringRequest volleyUpdateDefaultAreas(){
-        String url ="http://10.0.2.2/android/jobOfferAreas.php?";
+    public StringRequest volleyUpdateDefaultAreas() {
+        String url = "http://10.0.2.2/android/jobOfferAreas.php?";
 
         // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
@@ -562,7 +488,6 @@ public class SettingActivity  extends AppCompatActivity {
                     public void onResponse(String response) {
                         System.out.println(response);
                         ArrayList<OfferArea> areasRefresh = new ArrayList<>();
-
 
 
                         // Display the first 500 characters of the response string.
@@ -587,10 +512,10 @@ public class SettingActivity  extends AppCompatActivity {
                                     category.setAreaid(settingsPreferences.getInt("offerAreaId " + i, 0));
                                     category.setTitle(settingsPreferences.getString("offerAreaTitle " + i, ""));
                                     areasRefresh.add(category);
-                                    System.out.println(areasRefresh.get(i).getTitle()+"checkBoxAdapter");
+                                    System.out.println(areasRefresh.get(i).getTitle() + "checkBoxAdapter");
                                 }
 
-                                CheckBoxAreaAdapter checkBoxAdapter= new CheckBoxAreaAdapter(getApplicationContext(), areasRefresh);
+                                CheckBoxAreaAdapter checkBoxAdapter = new CheckBoxAreaAdapter(getApplicationContext(), areasRefresh);
                                 lv_areas.setAdapter(checkBoxAdapter);
 
 
@@ -603,7 +528,7 @@ public class SettingActivity  extends AppCompatActivity {
                     }
                 }, new Response.ErrorListener() {
             @Override
-            public void onErrorResponse (VolleyError error){
+            public void onErrorResponse(VolleyError error) {
 
                 if (error instanceof TimeoutError || error instanceof NoConnectionError) {
                     message = "TimeOutError";
@@ -626,10 +551,10 @@ public class SettingActivity  extends AppCompatActivity {
                     // Indicates that the server response could not be parsed
 
                 }
-                System.out.println("Volley: "+ message);
-                if(!message.equals("")){
-                    Toast.makeText(SettingActivity.this,"There is some problem with the server ("+message+")",Toast.LENGTH_LONG).show();
-                    Intent intentError = new Intent(SettingActivity.this,SettingActivity.class);
+                System.out.println("Volley: " + message);
+                if (!message.equals("")) {
+                    Toast.makeText(SettingActivity.this, "There is some problem with the server (" + message + ")", Toast.LENGTH_LONG).show();
+                    Intent intentError = new Intent(SettingActivity.this, SettingActivity.class);
                     startActivity(intentError);
                 }
             }
@@ -639,9 +564,9 @@ public class SettingActivity  extends AppCompatActivity {
     }
 
 
-    public StringRequest volleySaveOffers(final String param,final String param2) {
+    public StringRequest volleySaveOffers(final String param, final String param2) {
 
-        String url = "http://10.0.2.2/android/jobAds.php?";
+        String url = "http://10.0.2.2/android/jobAdsArray.php?";
 
         // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
@@ -663,35 +588,37 @@ public class SettingActivity  extends AppCompatActivity {
 
                                 JSONObject jsonObjectCategory = jsonArray.getJSONObject(i);
 
-                                if(!idArray.contains(Integer.valueOf(jsonObjectCategory.getString("jad_id")))) {
-                                    idArray.add(Integer.valueOf(jsonObjectCategory.getString("jad_id")));
 
+                                JobOffer offer = new JobOffer();
+                                offer.setId(Integer.valueOf(jsonObjectCategory.getString("jad_id")));
+                                offer.setCatid(Integer.valueOf(jsonObjectCategory.getString("jad_catid")));
+                                offer.setAreaid(Integer.valueOf(jsonObjectCategory.getString("jaarea_id")));
+                                offer.setTitle(jsonObjectCategory.getString("jad_title"));
+                                offer.setCattitle(jsonObjectCategory.getString("jacat_title"));
+                                offer.setAreatitle(jsonObjectCategory.getString("jaarea_title"));
+                                offer.setLink(jsonObjectCategory.getString("jad_link"));
+                                offer.setDesc(jsonObjectCategory.getString("jad_desc"));
+                                offer.setDate(format.parse(jsonObjectCategory.getString("jad_date")));
+                                offer.setDownloaded(jsonObjectCategory.getString("jad_downloaded"));
+                                System.out.println(offer.getTitle() + " first time");
 
-                                    JobOffer offer = new JobOffer();
-                                    offer.setId(Integer.valueOf(jsonObjectCategory.getString("jad_id")));
-                                    offer.setCatid(Integer.valueOf(jsonObjectCategory.getString("jad_catid")));
-                                    offer.setTitle(jsonObjectCategory.getString("jad_title"));
-                                    offer.setDate(format.parse(jsonObjectCategory.getString("jad_date")));
-                                    offer.setDownloaded(jsonObjectCategory.getString("jad_downloaded"));
-                                    System.out.println(offer.getTitle() + " first time");
+                                asyncOffers.add(offer);
 
-                                    asyncOffers.add(offer);
-
-                                    Collections.sort(asyncOffers, new Comparator<JobOffer>() {
-                                        @Override
-                                        public int compare(JobOffer jobOffer, JobOffer t1) {
-                                            if (jobOffer.getDate().getTime() - t1.getDate().getTime() < 0)
-                                                return 1;
-                                            else if (jobOffer.getDate().getTime() - t1.getDate().getTime() == 0)
-                                                return 0;
-                                            else
-                                                return -1;
-                                        }
-                                    });
-                                    for (int x = 0; x < asyncOffers.size(); x++) {
-                                        System.out.println(asyncOffers.get(x).getTitle());
+                                Collections.sort(asyncOffers, new Comparator<JobOffer>() {
+                                    @Override
+                                    public int compare(JobOffer jobOffer, JobOffer t1) {
+                                        if (jobOffer.getDate().getTime() - t1.getDate().getTime() < 0)
+                                            return 1;
+                                        else if (jobOffer.getDate().getTime() - t1.getDate().getTime() == 0)
+                                            return 0;
+                                        else
+                                            return -1;
                                     }
+                                });
+                                for (int x = 0; x < asyncOffers.size(); x++) {
+                                    System.out.println(asyncOffers.get(x).getTitle());
                                 }
+
 
                                 i++;
                             }
@@ -702,62 +629,68 @@ public class SettingActivity  extends AppCompatActivity {
                             e.printStackTrace();
                         }
 
-                        if(addNewChecked) {
 
-                            for (int j = 0; j < settingsPreferences.getInt("numberOfCategories", 0); j++) {
-                                System.out.println(settingsPreferences.getString("checkedCategoryTitle " + j, "") + "Removed from checked categories");
-                                settingsPreferences.edit().remove("checkedCatergoryId " + j).apply();
-                                settingsPreferences.edit().remove("checkedCatergoryTitle " + j).apply();
-                            }
+                        for (int j = 0; j < settingsPreferences.getInt("numberOfCategories", 0); j++) {
+                            System.out.println(settingsPreferences.getString("checkedCategoryTitle " + j, "") + "Removed from checked categories");
+                            settingsPreferences.edit().remove("checkedCatergoryId " + j).apply();
+                            settingsPreferences.edit().remove("checkedCatergoryTitle " + j).apply();
+                        }
 
-                            for (OfferCategory oc : offerCategories) {
+                        for (OfferCategory oc : offerCategories) {
 
-                                System.out.println(settingsPreferences.getString("checkedCategoryTitle " + offerCategories.indexOf(oc), "") + "Previously in checked categories");
-                                settingsPreferences.edit().putInt("checkedCategoryId " + offerCategories.indexOf(oc), oc.getCatid()).apply();
-                                settingsPreferences.edit().putString("checkedCategoryTitle " + offerCategories.indexOf(oc), oc.getTitle()).apply();
-                                System.out.println(settingsPreferences.getString("checkedCategoryTitle " + offerCategories.indexOf(oc), "") + "Added to checked categories");
-
-                            }
-
-                            for (int j = 0; j < settingsPreferences.getInt("numberOfAreas", 0); j++) {
-                                System.out.println(settingsPreferences.getString("checkedAreaTitle " + j, "") + "Removed from checked categories");
-                                settingsPreferences.edit().remove("checkedAreaId " + j).apply();
-                                settingsPreferences.edit().remove("checkedAreaTitle " + j).apply();
-                            }
-
-                            for (OfferArea oa : offerAreas) {
-
-                                System.out.println(settingsPreferences.getString("checkedAreaTitle " + offerAreas.indexOf(oa), "") + "Previously in checked categories");
-                                settingsPreferences.edit().putInt("checkedAreaId " + offerAreas.indexOf(oa), oa.getAreaid()).apply();
-                                settingsPreferences.edit().putString("checkedAreaTitle " + offerAreas.indexOf(oa), oa.getTitle()).apply();
-                                System.out.println(settingsPreferences.getString("checkedAreaTitle " + offerAreas.indexOf(oa), "") + "Added to checked categories");
-
-                            }
-                            settingsPreferences.edit().putInt("numberOfCheckedCategories", offerCategories.size()).apply();
-                            settingsPreferences.edit().putInt("numberOfCheckedAreas", offerAreas.size()).apply();
-                            addNewChecked = false;
+                            System.out.println(settingsPreferences.getString("checkedCategoryTitle " + offerCategories.indexOf(oc), "") + "Previously in checked categories");
+                            settingsPreferences.edit().putInt("checkedCategoryId " + offerCategories.indexOf(oc), oc.getCatid()).apply();
+                            settingsPreferences.edit().putString("checkedCategoryTitle " + offerCategories.indexOf(oc), oc.getTitle()).apply();
+                            System.out.println(settingsPreferences.getString("checkedCategoryTitle " + offerCategories.indexOf(oc), "") + "Added to checked categories");
 
                         }
+
+                        for (int j = 0; j < settingsPreferences.getInt("numberOfAreas", 0); j++) {
+                            System.out.println(settingsPreferences.getString("checkedAreaTitle " + j, "") + "Removed from checked categories");
+                            settingsPreferences.edit().remove("checkedAreaId " + j).apply();
+                            settingsPreferences.edit().remove("checkedAreaTitle " + j).apply();
+                        }
+
+                        for (OfferArea oa : offerAreas) {
+
+                            System.out.println(settingsPreferences.getString("checkedAreaTitle " + offerAreas.indexOf(oa), "") + "Previously in checked categories");
+                            settingsPreferences.edit().putInt("checkedAreaId " + offerAreas.indexOf(oa), oa.getAreaid()).apply();
+                            settingsPreferences.edit().putString("checkedAreaTitle " + offerAreas.indexOf(oa), oa.getTitle()).apply();
+                            System.out.println(settingsPreferences.getString("checkedAreaTitle " + offerAreas.indexOf(oa), "") + "Added to checked categories");
+
+                        }
+                        settingsPreferences.edit().putInt("numberOfCheckedCategories", offerCategories.size()).apply();
+                        settingsPreferences.edit().putInt("numberOfCheckedAreas", offerAreas.size()).apply();
 
 
                         for (int j = 0; j < 5; j++) {
                             settingsPreferences.edit().remove("offerId " + j).apply();
                             settingsPreferences.edit().remove("offerCatid " + j).apply();
+                            settingsPreferences.edit().remove("offerAreaid " + j).apply();
                             settingsPreferences.edit().remove("offerTitle " + j).apply();
+                            settingsPreferences.edit().remove("offerCattitle " + j).apply();
+                            settingsPreferences.edit().remove("offerAreatitle " + j).apply();
+                            settingsPreferences.edit().remove("offerLink " + j).apply();
+                            settingsPreferences.edit().remove("offerDesc " + j).apply();
                             settingsPreferences.edit().remove("offerDate " + j).apply();
                             settingsPreferences.edit().remove("offerDownloaded " + j).apply();
                         }
 
                         for (int i = 0; i < asyncOffers.size(); i++) {
-                            System.out.println(asyncOffers.get(i).getTitle()+" in the Array that fills settings ");
+                            System.out.println(asyncOffers.get(i).getTitle() + " in the Array that fills settings ");
                         }
-                        if(asyncOffers.size()>0) {
+                        if (asyncOffers.size() > 0) {
                             for (int i = 0; i < asyncOffers.size(); i++) {
                                 if (i < 5) {
 
                                     settingsPreferences.edit().putInt("offerId " + i, asyncOffers.get(i).getId()).apply();
                                     settingsPreferences.edit().putInt("offerCatid " + i, asyncOffers.get(i).getCatid()).apply();
+                                    settingsPreferences.edit().putInt("offerAreaid " + i, asyncOffers.get(i).getAreaid()).apply();
                                     settingsPreferences.edit().putString("offerTitle " + i, asyncOffers.get(i).getTitle()).apply();
+                                    settingsPreferences.edit().putString("offerCattitle " + i, asyncOffers.get(i).getCattitle()).apply();
+                                    settingsPreferences.edit().putString("offerAreatitle " + i, asyncOffers.get(i).getAreatitle()).apply();
+                                    settingsPreferences.edit().putString("offerLink " + i, asyncOffers.get(i).getLink()).apply();
+                                    settingsPreferences.edit().putString("offerDesc " + i, asyncOffers.get(i).getDesc()).apply();
                                     settingsPreferences.edit().putLong("offerDate " + i, asyncOffers.get(i).getDate().getTime()).apply();
                                     settingsPreferences.edit().putString("offerDownloaded " + i, asyncOffers.get(i).getDownloaded()).apply();
                                     System.out.println(settingsPreferences.getLong("offerDate " + i, 0));
@@ -771,16 +704,14 @@ public class SettingActivity  extends AppCompatActivity {
                             settingsPreferences.edit().putLong("lastNotDate", asyncOffers.get(0).getDate().getTime()).apply();
 
                             System.out.println(settingsPreferences.getLong("lastSeenDate", 0));
-                        }else{
+                        } else {
                             settingsPreferences.edit().putInt("numberOfOffers", 0).apply();
                         }
 
-                        s++;
+                        Intent intent = new Intent(SettingActivity.this, MainActivity.class);
+                        startActivity(intent);
 
-                        if(s==settingsPreferences.getInt("numberOfCheckedCategories",0)* settingsPreferences.getInt("numberOfCheckedAreas",0)){
-                            Intent intent = new Intent(SettingActivity.this, MainActivity.class);
-                            startActivity(intent);
-                        }
+
                     }
 
                 }, new Response.ErrorListener() {
@@ -809,9 +740,9 @@ public class SettingActivity  extends AppCompatActivity {
 
                 }
                 System.out.println("Volley: " + message);
-                if(!message.equals("")){
-                    Toast.makeText(SettingActivity.this,"There is some problem with the server ("+message+")",Toast.LENGTH_LONG).show();
-                    Intent intentError = new Intent(SettingActivity.this,SettingActivity.class);
+                if (!message.equals("")) {
+                    Toast.makeText(SettingActivity.this, "There is some problem with the server (" + message + ")", Toast.LENGTH_LONG).show();
+                    Intent intentError = new Intent(SettingActivity.this, SettingActivity.class);
                     startActivity(intentError);
                 }
             }
@@ -820,8 +751,8 @@ public class SettingActivity  extends AppCompatActivity {
             @Override
             protected Map<String, String> getParams() {
                 Map<String, String> params = new HashMap<>();
-                params.put("jacat_id",param);
-                params.put("jaarea_id",param2);
+                params.put("jacat_id", param);
+                params.put("jaarea_id", param2);
 
                 return params;
             }
@@ -830,16 +761,14 @@ public class SettingActivity  extends AppCompatActivity {
     }
 
 
-    public void volleySetDefault(){
-        String url ="http://10.0.2.2/android/jobOfferCategories.php";
+    public void volleySetDefault() {
+        String url = "http://10.0.2.2/android/jobOfferCategories.php";
 
         // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
-
-
 
 
                         // Display the first 500 characters of the response string.
@@ -857,6 +786,13 @@ public class SettingActivity  extends AppCompatActivity {
                                 settingsPreferences.edit().putInt("checkedCategoryId " + i, Integer.valueOf(jsonObjectCategory.getString("jacat_id"))).apply();
                                 settingsPreferences.edit().putString("offerCategoryTitle " + i, jsonObjectCategory.getString("jacat_title")).apply();
                                 settingsPreferences.edit().putString("checkedCategoryTitle " + i, jsonObjectCategory.getString("jacat_title")).apply();
+                                if (i < jsonArray.length() - 1) {
+                                    categoriesIds += jsonObjectCategory.getString("jacat_id") + ",";
+                                } else
+                                    categoriesIds += jsonObjectCategory.getString("jacat_id");
+                                System.out.println(categoriesIds.toString());
+
+
                                 System.out.println(jsonObjectCategory.toString());
                                 System.out.println(settingsPreferences.getInt("checkedCategoryId " + i, 0) + "In The Task set Default");
                                 System.out.println(settingsPreferences.getString("checkedCategoryTitle " + i, ""));
@@ -868,13 +804,13 @@ public class SettingActivity  extends AppCompatActivity {
                         } catch (JSONException e) {
 
                             e.printStackTrace();
-                            Intent intentError = new Intent(SettingActivity.this,MainActivity.class);
+                            Intent intentError = new Intent(SettingActivity.this, MainActivity.class);
                             startActivity(intentError);
                         }
                     }
                 }, new Response.ErrorListener() {
             @Override
-            public void onErrorResponse (VolleyError error){
+            public void onErrorResponse(VolleyError error) {
 
                 if (error instanceof TimeoutError || error instanceof NoConnectionError) {
                     message = "TimeOutError";
@@ -897,10 +833,10 @@ public class SettingActivity  extends AppCompatActivity {
                     // Indicates that the server response could not be parsed
 
                 }
-                System.out.println("Volley: "+ message);
-                if(!message.equals("")){
-                    Toast.makeText(SettingActivity.this,"There is some problem with the server ("+message+")",Toast.LENGTH_LONG).show();
-                    Intent intentError = new Intent(SettingActivity.this,MainActivity.class);
+                System.out.println("Volley: " + message);
+                if (!message.equals("")) {
+                    Toast.makeText(SettingActivity.this, "There is some problem with the server (" + message + ")", Toast.LENGTH_LONG).show();
+                    Intent intentError = new Intent(SettingActivity.this, MainActivity.class);
                     startActivity(intentError);
                 }
             }
@@ -909,8 +845,8 @@ public class SettingActivity  extends AppCompatActivity {
         Volley.newRequestQueue(MyApplication.getAppContext()).add(stringRequest);
     }
 
-    public void volleySetCheckedCategories(final String param,final String param2) {
-        String url = "http://10.0.2.2/android/jobAds.php?";
+    public void volleySetCheckedCategories(final String param, final String param2) {
+        String url = "http://10.0.2.2/android/jobAdsArray.php?";
 
         // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
@@ -929,35 +865,36 @@ public class SettingActivity  extends AppCompatActivity {
 
                                 JSONObject jsonObjectCategory = jsonArray.getJSONObject(i);
 
-                                if(!idArray.contains(Integer.valueOf(jsonObjectCategory.getString("jad_id")))) {
-                                    idArray.add(Integer.valueOf(jsonObjectCategory.getString("jad_id")));
+                                JobOffer offer = new JobOffer();
+                                offer.setId(Integer.valueOf(jsonObjectCategory.getString("jad_id")));
+                                offer.setCatid(Integer.valueOf(jsonObjectCategory.getString("jad_catid")));
+                                offer.setAreaid(Integer.valueOf(jsonObjectCategory.getString("jaarea_id")));
+                                offer.setTitle(jsonObjectCategory.getString("jad_title"));
+                                offer.setCattitle(jsonObjectCategory.getString("jacat_title"));
+                                offer.setAreatitle(jsonObjectCategory.getString("jaarea_title"));
+                                offer.setLink(jsonObjectCategory.getString("jad_link"));
+                                offer.setDesc(jsonObjectCategory.getString("jad_desc"));
+                                offer.setDate(format.parse(jsonObjectCategory.getString("jad_date")));
+                                offer.setDownloaded(jsonObjectCategory.getString("jad_downloaded"));
+                                System.out.println(offer.getTitle() + " first time");
 
+                                asyncOffers.add(offer);
 
-                                    JobOffer offer = new JobOffer();
-                                    offer.setId(Integer.valueOf(jsonObjectCategory.getString("jad_id")));
-                                    offer.setCatid(Integer.valueOf(jsonObjectCategory.getString("jad_catid")));
-                                    offer.setTitle(jsonObjectCategory.getString("jad_title"));
-                                    offer.setDate(format.parse(jsonObjectCategory.getString("jad_date")));
-                                    offer.setDownloaded(jsonObjectCategory.getString("jad_downloaded"));
-                                    System.out.println(offer.getTitle() + " first time");
-
-                                    asyncOffers.add(offer);
-
-                                    Collections.sort(asyncOffers, new Comparator<JobOffer>() {
-                                        @Override
-                                        public int compare(JobOffer jobOffer, JobOffer t1) {
-                                            if (jobOffer.getDate().getTime() - t1.getDate().getTime() < 0)
-                                                return 1;
-                                            else if (jobOffer.getDate().getTime() - t1.getDate().getTime() == 0)
-                                                return 0;
-                                            else
-                                                return -1;
-                                        }
-                                    });
-                                    for (int x = 0; x < asyncOffers.size(); x++) {
-                                        System.out.println(asyncOffers.get(x).getTitle());
+                                Collections.sort(asyncOffers, new Comparator<JobOffer>() {
+                                    @Override
+                                    public int compare(JobOffer jobOffer, JobOffer t1) {
+                                        if (jobOffer.getDate().getTime() - t1.getDate().getTime() < 0)
+                                            return 1;
+                                        else if (jobOffer.getDate().getTime() - t1.getDate().getTime() == 0)
+                                            return 0;
+                                        else
+                                            return -1;
                                     }
+                                });
+                                for (int x = 0; x < asyncOffers.size(); x++) {
+                                    System.out.println(asyncOffers.get(x).getTitle());
                                 }
+
 
                                 i++;
                             }
@@ -970,23 +907,33 @@ public class SettingActivity  extends AppCompatActivity {
 
                         for (int j = 0; j < 5; j++) {
                             settingsPreferences.edit().remove("offerId " + j).apply();
+                            settingsPreferences.edit().remove("offerAreaid " + j).apply();
                             settingsPreferences.edit().remove("offerCatid " + j).apply();
                             settingsPreferences.edit().remove("offerTitle " + j).apply();
+                            settingsPreferences.edit().remove("offerCattitle " + j).apply();
+                            settingsPreferences.edit().remove("offerAreatitle " + j).apply();
+                            settingsPreferences.edit().remove("offerLink " + j).apply();
+                            settingsPreferences.edit().remove("offerDesc " + j).apply();
                             settingsPreferences.edit().remove("offerDate " + j).apply();
                             settingsPreferences.edit().remove("offerDownloaded " + j).apply();
                         }
 
                         for (int i = 0; i < asyncOffers.size(); i++) {
-                            System.out.println(asyncOffers.get(i).getTitle()+" in the Array that fills settings ");
+                            System.out.println(asyncOffers.get(i).getTitle() + " in the Array that fills settings ");
                         }
 
-                        if(asyncOffers.size()>0) {
+                        if (asyncOffers.size() > 0) {
                             for (int i = 0; i < asyncOffers.size(); i++) {
                                 if (i < 5) {
 
                                     settingsPreferences.edit().putInt("offerId " + i, asyncOffers.get(i).getId()).apply();
                                     settingsPreferences.edit().putInt("offerCatid " + i, asyncOffers.get(i).getCatid()).apply();
+                                    settingsPreferences.edit().putInt("offerAreaid " + i, asyncOffers.get(i).getAreaid()).apply();
                                     settingsPreferences.edit().putString("offerTitle " + i, asyncOffers.get(i).getTitle()).apply();
+                                    settingsPreferences.edit().putString("offerCattitle " + i, asyncOffers.get(i).getCattitle()).apply();
+                                    settingsPreferences.edit().putString("offerAreatitle " + i, asyncOffers.get(i).getAreatitle()).apply();
+                                    settingsPreferences.edit().putString("offerLink " + i, asyncOffers.get(i).getLink()).apply();
+                                    settingsPreferences.edit().putString("offerDesc " + i, asyncOffers.get(i).getDesc()).apply();
                                     settingsPreferences.edit().putLong("offerDate " + i, asyncOffers.get(i).getDate().getTime()).apply();
                                     settingsPreferences.edit().putString("offerDownloaded " + i, asyncOffers.get(i).getDownloaded()).apply();
                                     System.out.println(settingsPreferences.getLong("offerDate " + i, 0));
@@ -1002,15 +949,12 @@ public class SettingActivity  extends AppCompatActivity {
                             System.out.println(settingsPreferences.getLong("lastSeenDate", 0));
 
                         }
-                        t++;
 
                         System.out.println(t);
-                        System.out.println(settingsPreferences.getInt("numberOfCheckedCategories",0));
+                        System.out.println(settingsPreferences.getInt("numberOfCheckedCategories", 0));
 
-                        if(t==settingsPreferences.getInt("numberOfCheckedCategories",0)*settingsPreferences.getInt("numberOfCheckedAreas",0)){
-                            Intent intent = new Intent(SettingActivity.this, MainActivity.class);
-                            startActivity(intent);
-                        }
+                        Intent intent = new Intent(SettingActivity.this, MainActivity.class);
+                        startActivity(intent);
 
 
                     }
@@ -1041,9 +985,9 @@ public class SettingActivity  extends AppCompatActivity {
 
                 }
                 System.out.println("Volley: " + message);
-                if(!message.equals("")){
-                    Toast.makeText(SettingActivity.this,"There is some problem with the server ("+message+")",Toast.LENGTH_LONG).show();
-                    Intent intentError = new Intent(SettingActivity.this,MainActivity.class);
+                if (!message.equals("")) {
+                    Toast.makeText(SettingActivity.this, "There is some problem with the server (" + message + ")", Toast.LENGTH_LONG).show();
+                    Intent intentError = new Intent(SettingActivity.this, MainActivity.class);
                     startActivity(intentError);
                 }
             }
@@ -1052,8 +996,8 @@ public class SettingActivity  extends AppCompatActivity {
             @Override
             protected Map<String, String> getParams() {
                 Map<String, String> params = new HashMap<>();
-                params.put("jacat_id",param);
-                params.put("jaarea_id",param2);
+                params.put("jacat_id", param);
+                params.put("jaarea_id", param2);
 
                 return params;
             }
@@ -1062,16 +1006,14 @@ public class SettingActivity  extends AppCompatActivity {
     }
 
 
-    public void volleySetDefaultAreas(){
-        String url ="http://10.0.2.2/android/jobOfferAreas.php";
+    public void volleySetDefaultAreas() {
+        String url = "http://10.0.2.2/android/jobOfferAreas.php";
 
         // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
-
-
 
 
                         // Display the first 500 characters of the response string.
@@ -1089,34 +1031,31 @@ public class SettingActivity  extends AppCompatActivity {
                                 settingsPreferences.edit().putInt("checkedAreaId " + i, Integer.valueOf(jsonObjectCategory.getString("jaarea_id"))).apply();
                                 settingsPreferences.edit().putString("offerAreaTitle " + i, jsonObjectCategory.getString("jaarea_title")).apply();
                                 settingsPreferences.edit().putString("checkedAreaTitle " + i, jsonObjectCategory.getString("jaarea_title")).apply();
+                                if (i < jsonArray.length() - 1) {
+                                    areasIds += jsonObjectCategory.getString("jaarea_id") + ",";
+                                } else
+                                    areasIds += jsonObjectCategory.getString("jaarea_id");
+                                System.out.println(areasIds.toString());
+
                                 System.out.println(jsonObjectCategory.toString());
                                 System.out.println(settingsPreferences.getInt("checkedAreaId " + i, 0) + "In The Task set Default");
                                 System.out.println(settingsPreferences.getString("checkedAreaTitle " + i, ""));
                             }
                             System.out.println(settingsPreferences.getInt("numberOfCheckedAreas", 0));
 
-                            for (int v = 0; v < (settingsPreferences.getInt("numberOfCheckedCategories", 0)); v++) {
-                                for (int x = 0; x < (settingsPreferences.getInt("numberOfCheckedAreas", 0)); x++) {
-                                    if (settingsPreferences.getInt("checkedCategoryId " + v, 0) != 0 && settingsPreferences.getInt("checkedAreaId " + x, 0) != 0) {
-                                        System.out.println(settingsPreferences.getInt("checkedCategoryId " + v, 0) + "Before the task show for the first time");
-                                        System.out.println(settingsPreferences.getString("checkedCategoryTitle " + v, ""));
-                                        //new TaskShowOffersFromCategories().execute(String.valueOf(settingsPreferences.getInt("checkedCategoryId " + v, 0)));
-                                        volleySetCheckedCategories(String.valueOf(settingsPreferences.getInt("checkedCategoryId " + v, 0)), String.valueOf(settingsPreferences.getInt("checkedAreaId " +x,0)));
-                                    }
-                                }
-                            }
+                            volleySetCheckedCategories(categoriesIds, areasIds);
 
 
                         } catch (JSONException e) {
 
                             e.printStackTrace();
-                            Intent intentError = new Intent(SettingActivity.this,MainActivity.class);
+                            Intent intentError = new Intent(SettingActivity.this, MainActivity.class);
                             startActivity(intentError);
                         }
                     }
                 }, new Response.ErrorListener() {
             @Override
-            public void onErrorResponse (VolleyError error){
+            public void onErrorResponse(VolleyError error) {
 
                 if (error instanceof TimeoutError || error instanceof NoConnectionError) {
                     message = "TimeOutError";
@@ -1139,10 +1078,10 @@ public class SettingActivity  extends AppCompatActivity {
                     // Indicates that the server response could not be parsed
 
                 }
-                System.out.println("Volley: "+ message);
-                if(!message.equals("")){
-                    Toast.makeText(SettingActivity.this,"There is some problem with the server ("+message+")",Toast.LENGTH_LONG).show();
-                    Intent intentError = new Intent(SettingActivity.this,MainActivity.class);
+                System.out.println("Volley: " + message);
+                if (!message.equals("")) {
+                    Toast.makeText(SettingActivity.this, "There is some problem with the server (" + message + ")", Toast.LENGTH_LONG).show();
+                    Intent intentError = new Intent(SettingActivity.this, MainActivity.class);
                     startActivity(intentError);
                 }
             }
@@ -1152,6 +1091,35 @@ public class SettingActivity  extends AppCompatActivity {
     }
 
 
+    public void btnIntervalClicked(View view) {
+        final String[] select = {"Every Day", "Once a Week", "Twice a Week"};
+        AlertDialog dialog = new AlertDialog.Builder(SettingActivity.this)
+                .setTitle("Select State")
+                .setSingleChoiceItems(select, 0, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        selected = which;
+                    }
+                })
+
+                .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        if (selected == 0) {
+                            settingsPreferences.edit().putLong("interval", 1000000).apply();
+                            Toast.makeText(SettingActivity.this, String.valueOf(settingsPreferences.getLong("interval", 0)), Toast.LENGTH_LONG).show();
+                        } else if (selected == 1) {
+                            settingsPreferences.edit().putLong("interval", 18000).apply();
+                            Toast.makeText(SettingActivity.this, String.valueOf(settingsPreferences.getLong("interval", 0)), Toast.LENGTH_LONG).show();
+                        } else {
+                            settingsPreferences.edit().putLong("interval", 36000).apply();
+                            Toast.makeText(SettingActivity.this, String.valueOf(settingsPreferences.getLong("interval", 0)), Toast.LENGTH_LONG).show();
+                        }
+                    }
+                })
+                .create();
+        dialog.show();
+    }
 
 
     @Override
@@ -1159,6 +1127,10 @@ public class SettingActivity  extends AppCompatActivity {
         super.onDestroy();
         queue.stop();
     }
+
+
+
+
 }
 
 

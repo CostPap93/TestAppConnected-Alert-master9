@@ -65,7 +65,6 @@ public class UnseenActivity  extends AppCompatActivity {
 
     ListView lv;
     DateFormat format;
-    Button btn_back;
 
 
 
@@ -78,7 +77,6 @@ public class UnseenActivity  extends AppCompatActivity {
         lv = findViewById(R.id.listView);
         asyncOffers = new ArrayList<>();
         offers = new ArrayList<>();
-        btn_back = findViewById(R.id.btn_back);
         format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
 
@@ -94,7 +92,12 @@ public class UnseenActivity  extends AppCompatActivity {
                 JobOffer jobOffer = new JobOffer();
                 jobOffer.setId(settingsPreferences.getInt("offerId " + i, 0));
                 jobOffer.setCatid(settingsPreferences.getInt("offerCatid " + i, 0));
+                jobOffer.setAreaid(settingsPreferences.getInt("offerAreaid " + i, 0));
                 jobOffer.setTitle(settingsPreferences.getString("offerTitle " + i, ""));
+                jobOffer.setCattitle(settingsPreferences.getString("offerCattitle " + i, ""));
+                jobOffer.setAreatitle(settingsPreferences.getString("offerAreatitle " + i, ""));
+                jobOffer.setLink(settingsPreferences.getString("offerLink " + i, ""));
+                jobOffer.setDesc(settingsPreferences.getString("offerDesc " + i, ""));
                 jobOffer.setDate(new Date(settingsPreferences.getLong("offerDate " + i, 0)));
                 jobOffer.setDownloaded(settingsPreferences.getString("offerDownloaded " + i, ""));
 
@@ -103,7 +106,6 @@ public class UnseenActivity  extends AppCompatActivity {
 
                 offers.add(jobOffer);
 
-                btn_back.setVisibility(View.VISIBLE);
 
             }
 

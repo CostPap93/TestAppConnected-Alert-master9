@@ -12,8 +12,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.res.TypedArray;
+import android.graphics.Bitmap;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
@@ -33,6 +36,8 @@ import android.view.MenuItem;
 
 import android.widget.AdapterView;
 import android.widget.Button;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.Toast;
@@ -50,6 +55,7 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.nex3z.notificationbadge.NotificationBadge;
+import com.squareup.picasso.Picasso;
 import com.txusballesteros.bubbles.BubbleLayout;
 import com.txusballesteros.bubbles.BubblesManager;
 import com.txusballesteros.bubbles.OnInitializedCallback;
@@ -60,6 +66,7 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.net.URL;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -70,18 +77,23 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import static android.provider.ContactsContract.CommonDataKinds.Website.URL;
 
 public class MainActivity extends AppCompatActivity  {
     SharedPreferences settingsPreferences;
     ArrayList<JobOffer> offers;
     ArrayList<JobOffer> asyncOffers;
+
     private int MY_PERMISSION = 1000;
     static BubblesManager bubblesManager;
     private NotificationBadge mBadge;
     private int count;
+    ImageButton imgBtn_ad;
 
     NotificationCompat.Builder notification;
     private static final int uniqueID = 45612;
@@ -91,12 +103,12 @@ public class MainActivity extends AppCompatActivity  {
 
     ListView lv;
     DateFormat format;
-    Button btn_back;
     String message = "";
     RequestQueue queue;
-    SwipeRefreshLayout swipeLayout;
     ArrayList<Integer> idArray = new ArrayList<>();
     int s = 0;
+    String areaIds;
+    String categoriesIds;
 
 
 
@@ -112,9 +124,9 @@ public class MainActivity extends AppCompatActivity  {
         lv = findViewById(R.id.listView);
         asyncOffers = new ArrayList<>();
         offers = new ArrayList<>();
-        btn_back = findViewById(R.id.btn_back);
         format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
+        imgBtn_ad = findViewById(R.id.imgBtn_ad);
 
 
         settingsPreferences = PreferenceManager.getDefaultSharedPreferences(this);
@@ -170,22 +182,40 @@ public class MainActivity extends AppCompatActivity  {
             }
         });
 
-        swipeLayout = findViewById(R.id.swipeContainer);
-        // Adding Listener
-        swipeLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
-            @Override
-            public void onRefresh() {
-                // Your code here
-                Toast.makeText(getApplicationContext(), "Works!", Toast.LENGTH_LONG).show();
-                // To keep animation for 4 seconds
-                RefreshOperation();
+        String uri = getIntent().getStringExtra("uri");
+        System.out.println("This is the uri: "+uri.toString());
 
+        if(isConn()) {
+            Random random = new Random();
+
+            Picasso.with(MainActivity.this).load("http://10.0.2.2/android/images/image" + random + ".jpg").into(imgBtn_ad);
+            if(imgBtn_ad.getVisibility()==View.INVISIBLE){
+                imgBtn_ad.setVisibility(View.VISIBLE);
             }
-        });
+        }else {
+            if (imgBtn_ad.getVisibility() == View.VISIBLE) {
+                imgBtn_ad.setVisibility(View.INVISIBLE);
+            }
+        }
 
 
+    }
 
 
+    public void btnImgClicked(View view){
+        Intent browseIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://datalabs.edu.gr/"));
+        startActivity(browseIntent);
+    }
+
+    public boolean isConn() {
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo networkInfo = connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+        boolean isWifiConn = networkInfo.isConnected();
+        networkInfo = connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_MOBILE);
+        boolean isMobileConn = networkInfo.isConnected();
+        Log.d("connection", "Wifi connected: " + isWifiConn);
+        Log.d("connection", "Mobile connected: " + isMobileConn);
+        return isWifiConn || isMobileConn;
     }
 
 
@@ -211,29 +241,29 @@ public class MainActivity extends AppCompatActivity  {
 
     public void RefreshOperation() {
 
+        categoriesIds="";
+        areaIds = "";
+
         if(queue == null) {
             queue = Volley.newRequestQueue(this);
         }
 
         for (int v = 0; v < (settingsPreferences.getInt("numberOfCheckedCategories", 0)); v++) {
-            for (int x = 0; x < (settingsPreferences.getInt("numberOfCheckedCategories", 0)); x++) {
-                if (settingsPreferences.getInt("checkedCategoryId " + v, 0) != 0 && settingsPreferences.getInt("checkedAreaId " + x, 0) != 0) {
-                    System.out.println(settingsPreferences.getInt("checkedCategoryId " + v, 0) + "Before the task show for the first time");
-                    System.out.println(settingsPreferences.getString("checkedCategoryTitle " + v, ""));
-                    //new TaskShowOffersFromCategories().execute(String.valueOf(settingsPreferences.getInt("checkedCategoryId " + v, 0)));
-                    queue.add(volleySetCheckedCategories(String.valueOf(settingsPreferences.getInt("checkedCategoryId " + v, 0)),String.valueOf(settingsPreferences.getInt("checkedAreaId " + x, 0))));
-
-                }
-            }
+            if (v < settingsPreferences.getInt("numberOfCheckedCategories", 0) - 1) {
+                categoriesIds += settingsPreferences.getInt("checkedCategoryId " + v, 0) + ",";
+            } else
+                categoriesIds += settingsPreferences.getInt("checkedCategoryId " + v, 0);
+        }
+        for (int v = 0; v < (settingsPreferences.getInt("numberOfCheckedAreas", 0)); v++) {
+            if (v < settingsPreferences.getInt("numberOfCheckedAreas", 0) - 1) {
+                areaIds += settingsPreferences.getInt("checkedAreaId " + v, 0) + ",";
+            } else
+                areaIds += settingsPreferences.getInt("checkedAreaId " + v, 0);
         }
 
-        swipeLayout.setRefreshing(false);
-    }
 
 
-    public void btnBackClicked(View view){
-        Intent intent = new Intent(MainActivity.this,MainActivity.class);
-        startActivity(intent);
+
     }
 
 
@@ -265,7 +295,7 @@ public class MainActivity extends AppCompatActivity  {
     }
 
     public StringRequest volleySetCheckedCategories(final String param,final String param2) {
-        String url = "http://10.0.2.2/android/jobAds.php?";
+        String url = "http://10.0.2.2/android/jobAdsArray.php?";
 
 
         // Request a string response from the provided URL.
@@ -274,6 +304,7 @@ public class MainActivity extends AppCompatActivity  {
                     @Override
                     public void onResponse(String response) {
                         ArrayList<JobOffer> offersRefresh = new ArrayList<>();
+                        asyncOffers.clear();
                         JobOfferAdapter jobOfferAdapter= new JobOfferAdapter(getApplicationContext(), offersRefresh);
 
                         // Display the first 500 characters of the response string.
@@ -289,14 +320,16 @@ public class MainActivity extends AppCompatActivity  {
 
                                 JSONObject jsonObjectCategory = jsonArray.getJSONObject(i);
 
-                                if(!idArray.contains(Integer.valueOf(jsonObjectCategory.getString("jad_id")))) {
-                                    idArray.add(Integer.valueOf(jsonObjectCategory.getString("jad_id")));
-
 
                                     JobOffer offer = new JobOffer();
                                     offer.setId(Integer.valueOf(jsonObjectCategory.getString("jad_id")));
                                     offer.setCatid(Integer.valueOf(jsonObjectCategory.getString("jad_catid")));
+                                    offer.setAreaid(Integer.valueOf(jsonObjectCategory.getString("jaarea_id")));
                                     offer.setTitle(jsonObjectCategory.getString("jad_title"));
+                                    offer.setCattitle(jsonObjectCategory.getString("jacat_title"));
+                                    offer.setAreatitle(jsonObjectCategory.getString("jaarea_title"));
+                                    offer.setLink(jsonObjectCategory.getString("jad_link"));
+                                    offer.setDesc(jsonObjectCategory.getString("jad_desc"));
                                     offer.setDate(format.parse(jsonObjectCategory.getString("jad_date")));
                                     offer.setDownloaded(jsonObjectCategory.getString("jad_downloaded"));
                                     System.out.println(offer.getTitle() + " first time");
@@ -317,7 +350,6 @@ public class MainActivity extends AppCompatActivity  {
                                     for (int x = 0; x < asyncOffers.size(); x++) {
                                         System.out.println(asyncOffers.get(x).getTitle());
                                     }
-                                }
 
                                 i++;
                             }
@@ -331,7 +363,12 @@ public class MainActivity extends AppCompatActivity  {
                             for (int j = 0; j < 5; j++) {
                                 settingsPreferences.edit().remove("offerId " + j).apply();
                                 settingsPreferences.edit().remove("offerCatid " + j).apply();
+                                settingsPreferences.edit().remove("offerAreaid " + j).apply();
                                 settingsPreferences.edit().remove("offerTitle " + j).apply();
+                                settingsPreferences.edit().remove("offerCattitle " + j).apply();
+                                settingsPreferences.edit().remove("offerAreatitle " + j).apply();
+                                settingsPreferences.edit().remove("offerLink " + j).apply();
+                                settingsPreferences.edit().remove("offerDesc " + j).apply();
                                 settingsPreferences.edit().remove("offerDate " + j).apply();
                                 settingsPreferences.edit().remove("offerDownloaded " + j).apply();
                             }
@@ -345,7 +382,12 @@ public class MainActivity extends AppCompatActivity  {
 
                                     settingsPreferences.edit().putInt("offerId " + i, asyncOffers.get(i).getId()).apply();
                                     settingsPreferences.edit().putInt("offerCatid " + i, asyncOffers.get(i).getCatid()).apply();
+                                    settingsPreferences.edit().putInt("offerAreaid " + i, asyncOffers.get(i).getAreaid()).apply();
                                     settingsPreferences.edit().putString("offerTitle " + i, asyncOffers.get(i).getTitle()).apply();
+                                    settingsPreferences.edit().putString("offerCattitle " + i, asyncOffers.get(i).getCattitle()).apply();
+                                    settingsPreferences.edit().putString("offerAreatitle " + i, asyncOffers.get(i).getAreatitle()).apply();
+                                    settingsPreferences.edit().putString("offerLink " + i, asyncOffers.get(i).getLink()).apply();
+                                    settingsPreferences.edit().putString("offerDesc " + i, asyncOffers.get(i).getDesc()).apply();
                                     settingsPreferences.edit().putLong("offerDate " + i, asyncOffers.get(i).getDate().getTime()).apply();
                                     settingsPreferences.edit().putString("offerDownloaded " + i, asyncOffers.get(i).getDownloaded()).apply();
                                     System.out.println(settingsPreferences.getLong("offerDate " + i, 0));
@@ -364,20 +406,22 @@ public class MainActivity extends AppCompatActivity  {
 
 
 
-
                         for (int i = 0; i < settingsPreferences.getInt("numberOfOffers", 0); i++) {
 
                             JobOffer jobOffer = new JobOffer();
                             jobOffer.setId(settingsPreferences.getInt("offerId " + i, 0));
                             jobOffer.setCatid(settingsPreferences.getInt("offerCatid " + i, 0));
+                            jobOffer.setAreaid(settingsPreferences.getInt("offerAreaid " + i, 0));
                             jobOffer.setTitle(settingsPreferences.getString("offerTitle " + i, ""));
+                            jobOffer.setCattitle(settingsPreferences.getString("offerCattitle " + i, ""));
+                            jobOffer.setAreatitle(settingsPreferences.getString("offerAreatitle " + i, ""));
+                            jobOffer.setLink(settingsPreferences.getString("offerLink " + i, ""));
+                            jobOffer.setDesc(settingsPreferences.getString("offerDesc " + i, ""));
                             jobOffer.setDate(new Date(settingsPreferences.getLong("offerDate " + i, 0)));
                             jobOffer.setDownloaded(settingsPreferences.getString("offerDownloaded " + i, ""));
                             offersRefresh.add(jobOffer);
 
                         }
-
-
 
 
 
@@ -456,8 +500,101 @@ public class MainActivity extends AppCompatActivity  {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        imgBtn_ad = findViewById(R.id.imgBtn_ad);
+        Random random = new Random(2);
+
+        Picasso.with(MainActivity.this).load("http://10.0.2.2/android/images/image" + random + ".jpg").into(imgBtn_ad);
+        if(imgBtn_ad.getVisibility()==View.INVISIBLE){
+            imgBtn_ad.setVisibility(View.VISIBLE);
+        }
+
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
-        queue.stop();
     }
+
+    public void volleyImage() {
+
+        String url = "http://10.0.2.2/android/images.php";
+
+        // Request a string response from the provided URL.
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+
+
+
+                        // Display the first 500 characters of the response string.
+                        System.out.println("Volley: " + message);
+                        System.out.println(response);
+
+                        try {
+                            JSONObject jsonObjectAll = new JSONObject(response);
+                            JSONArray jsonArray = jsonObjectAll.getJSONArray("images");
+                            String[] imageNames = new String[jsonArray.length()];
+                            for(int i=0;i<jsonArray.length();i++){
+
+
+                                JSONObject jsonObjectCategory = jsonArray.getJSONObject(i);
+                                imageNames[i] = jsonObjectCategory.getString("image_title");
+
+                            }
+
+                            final Random rand = new Random();
+                            final int rndInt = rand.nextInt(imageNames.length);
+
+                            Picasso.with(MainActivity.this).load("http://10.0.2.2/android/images/"+imageNames[rndInt]+".jpg").into(imgBtn_ad);
+
+
+
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+
+                    }
+
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+
+                if (error instanceof TimeoutError || error instanceof NoConnectionError) {
+                    message = "TimeOutError";
+                    //This indicates that the reuest has either time out or there is no connection
+
+                } else if (error instanceof AuthFailureError) {
+                    message = "AuthFailureError";
+                    // Error indicating that there was an Authentication Failure while performing the request
+
+                } else if (error instanceof ServerError) {
+                    message = "ServerError";
+                    //Indicates that the server responded with a error response
+
+                } else if (error instanceof NetworkError) {
+                    message = "NetworkError";
+                    //Indicates that there was network error while performing the request
+
+                } else if (error instanceof ParseError) {
+                    message = "ParseError";
+                    // Indicates that the server response could not be parsed
+
+                }
+                System.out.println("Volley: " + message);
+                if (!message.equals("")) {
+                    Toast.makeText(MainActivity.this, "There is some problem with the server (" + message + ")", Toast.LENGTH_LONG).show();
+                    Intent intentError = new Intent(MainActivity.this, SettingActivity.class);
+                    startActivity(intentError);
+                }
+            }
+        }
+        );
+        Volley.newRequestQueue(MainActivity.this).add(stringRequest);
+    }
+
+
 }
+

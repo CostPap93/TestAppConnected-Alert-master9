@@ -58,7 +58,7 @@ public class NetworkSchedulerService extends JobService implements
     NotificationCompat.Builder notification;
     private static final int uniqueID = 45612;
     ArrayList<JobOffer> asyncOffers = new ArrayList<>();
-    int notCount;
+    int notCount,areaid;
     SharedPreferences settingsPreferences = PreferenceManager.getDefaultSharedPreferences(MyApplication.getAppContext());
 
 
@@ -66,8 +66,10 @@ public class NetworkSchedulerService extends JobService implements
     NotificationBadge mBadge;
     ArrayList<Integer> idArray = new ArrayList<>();
     String message = "";
+
     RequestQueue queue;
     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    String categoriesIds,areasIds;
 
 
 
@@ -124,6 +126,8 @@ public class NetworkSchedulerService extends JobService implements
         Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
 
         notCount = 0;
+        categoriesIds ="";
+        areasIds = "";
 
         if(queue == null) {
             queue = Volley.newRequestQueue(MyApplication.getAppContext());
@@ -133,14 +137,20 @@ public class NetworkSchedulerService extends JobService implements
 //            }
         if(isConnected && settingsPreferences.getBoolean("makeRequest",true)) {
             initializeBubblesManager();
-            for (int j = 0; j < settingsPreferences.getInt("numberOfCheckedCategories", 0); j++) {
-                for (int k = 0; k < settingsPreferences.getInt("numberOfCheckedAreas", 0); k++) {
-
-                    queue.add(volleySetCheckedCategories(String.valueOf(settingsPreferences.getInt("checkedCategoryId " + j, 0)),String.valueOf(settingsPreferences.getInt("checkedAreaId " + k, 0))));
-                    //new TaskShowOffersFromCategories().execute(String.valueOf(settingsPreferences.getInt("checkedCategoryId " + j, 0)));
-
-                }
+            for (int v = 0; v < (settingsPreferences.getInt("numberOfCheckedCategories", 0)); v++) {
+                if (v < settingsPreferences.getInt("numberOfCheckedCategories", 0) - 1) {
+                    categoriesIds += settingsPreferences.getInt("checkedCategoryId " + v, 0) + ",";
+                } else
+                    categoriesIds += settingsPreferences.getInt("checkedCategoryId " + v, 0);
             }
+            for (int v = 0; v < (settingsPreferences.getInt("numberOfCheckedAreas", 0)); v++) {
+                if (v < settingsPreferences.getInt("numberOfCheckedAreas", 0) - 1) {
+                    areasIds += settingsPreferences.getInt("checkedAreaId " + v, 0) + ",";
+                } else
+                    areasIds += settingsPreferences.getInt("checkedAreaId " + v, 0);
+            }
+
+            queue.add(volleySetCheckedCategories(categoriesIds,areasIds));
         }
 
     }
@@ -156,7 +166,7 @@ public class NetworkSchedulerService extends JobService implements
             System.out.println(settingsPreferences.getLong("offerDate " + i,0) > settingsPreferences.getLong("lastSeenDate", 0));
             if (settingsPreferences.getLong("offerDate " + i,0) > settingsPreferences.getLong("lastSeenDate", 0)) {
                 for(int j = 0; j < settingsPreferences.getInt("numberOfCheckedCategories", 0); j++) {
-                    for (int k = 0; k < settingsPreferences.getInt("numberOfCheckedCategories", 0); k++) {
+                    for (int k = 0; k < settingsPreferences.getInt("numberOfCheckedAreas", 0); k++) {
                         System.out.println(settingsPreferences.getInt("offerCatid " + i, 0));
                         System.out.println(settingsPreferences.getInt("checkedCategoryId " + j, 0));
                         if (settingsPreferences.getInt("offerCatid " + i, 0) == settingsPreferences.getInt("checkedCategoryId " + j, 0) && settingsPreferences.getInt("offerAreaid " + i, 0) == settingsPreferences.getInt("checkedAreaId " + k, 0)) {
@@ -175,7 +185,7 @@ public class NetworkSchedulerService extends JobService implements
     }
 
     public StringRequest volleySetCheckedCategories(final String param,final String param2) {
-        String url = "http://10.0.2.2/android/jobAds.php?";
+        String url = "http://10.0.2.2/android/jobAdsArray.php?";
 
         // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
@@ -195,35 +205,37 @@ public class NetworkSchedulerService extends JobService implements
 
                                 JSONObject jsonObjectCategory = jsonArray.getJSONObject(i);
 
-                                if(!idArray.contains(Integer.valueOf(jsonObjectCategory.getString("jad_id")))) {
-                                    idArray.add(Integer.valueOf(jsonObjectCategory.getString("jad_id")));
+                                JobOffer offer = new JobOffer();
+                                offer.setId(Integer.valueOf(jsonObjectCategory.getString("jad_id")));
+                                offer.setCatid(Integer.valueOf(jsonObjectCategory.getString("jad_catid")));
+                                offer.setAreaid(Integer.valueOf(jsonObjectCategory.getString("jaarea_id")));
+                                areaid = Integer.valueOf(jsonObjectCategory.getString("jaarea_id"));
+                                offer.setTitle(jsonObjectCategory.getString("jad_title"));
+                                offer.setCattitle(jsonObjectCategory.getString("jacat_title"));
+                                offer.setAreatitle(jsonObjectCategory.getString("jaarea_title"));
+                                offer.setLink(jsonObjectCategory.getString("jad_link"));
+                                offer.setDesc(jsonObjectCategory.getString("jad_desc"));
+                                offer.setDate(format.parse(jsonObjectCategory.getString("jad_date")));
+                                offer.setDownloaded(jsonObjectCategory.getString("jad_downloaded"));
+                                System.out.println(offer.getTitle() + " first time");
 
+                                asyncOffers.add(offer);
 
-                                    JobOffer offer = new JobOffer();
-                                    offer.setId(Integer.valueOf(jsonObjectCategory.getString("jad_id")));
-                                    offer.setCatid(Integer.valueOf(jsonObjectCategory.getString("jad_catid")));
-                                    offer.setTitle(jsonObjectCategory.getString("jad_title"));
-                                    offer.setDate(format.parse(jsonObjectCategory.getString("jad_date")));
-                                    offer.setDownloaded(jsonObjectCategory.getString("jad_downloaded"));
-                                    System.out.println(offer.getTitle() + " first time");
-
-                                    asyncOffers.add(offer);
-
-                                    Collections.sort(asyncOffers, new Comparator<JobOffer>() {
-                                        @Override
-                                        public int compare(JobOffer jobOffer, JobOffer t1) {
-                                            if (jobOffer.getDate().getTime() - t1.getDate().getTime() < 0)
-                                                return 1;
-                                            else if (jobOffer.getDate().getTime() - t1.getDate().getTime() == 0)
-                                                return 0;
-                                            else
-                                                return -1;
-                                        }
-                                    });
-                                    for (int x = 0; x < asyncOffers.size(); x++) {
-                                        System.out.println(asyncOffers.get(x).getTitle());
+                                Collections.sort(asyncOffers, new Comparator<JobOffer>() {
+                                    @Override
+                                    public int compare(JobOffer jobOffer, JobOffer t1) {
+                                        if (jobOffer.getDate().getTime() - t1.getDate().getTime() < 0)
+                                            return 1;
+                                        else if (jobOffer.getDate().getTime() - t1.getDate().getTime() == 0)
+                                            return 0;
+                                        else
+                                            return -1;
                                     }
+                                });
+                                for (int x = 0; x < asyncOffers.size(); x++) {
+                                    System.out.println(asyncOffers.get(x).getTitle());
                                 }
+
 
                                 i++;
                             }
@@ -239,7 +251,12 @@ public class NetworkSchedulerService extends JobService implements
                         for (int j = 0; j < 5; j++) {
                             settingsPreferences.edit().remove("offerId " + j).apply();
                             settingsPreferences.edit().remove("offerCatid " + j).apply();
+                            settingsPreferences.edit().remove("offerAreaid " + j).apply();
                             settingsPreferences.edit().remove("offerTitle " + j).apply();
+                            settingsPreferences.edit().remove("offerCattitle " + j).apply();
+                            settingsPreferences.edit().remove("offerAreatitle " + j).apply();
+                            settingsPreferences.edit().remove("offerLink " + j).apply();
+                            settingsPreferences.edit().remove("offerDesc " + j).apply();
                             settingsPreferences.edit().remove("offerDate " + j).apply();
                             settingsPreferences.edit().remove("offerDownloaded " + j).apply();
                         }
@@ -250,7 +267,12 @@ public class NetworkSchedulerService extends JobService implements
 
                                     settingsPreferences.edit().putInt("offerId " + i, asyncOffers.get(i).getId()).apply();
                                     settingsPreferences.edit().putInt("offerCatid " + i, asyncOffers.get(i).getCatid()).apply();
+                                    settingsPreferences.edit().putInt("offerAreaid " + i, asyncOffers.get(i).getAreaid()).apply();
                                     settingsPreferences.edit().putString("offerTitle " + i, asyncOffers.get(i).getTitle()).apply();
+                                    settingsPreferences.edit().putString("offerCattitle " + i, asyncOffers.get(i).getCattitle()).apply();
+                                    settingsPreferences.edit().putString("offerAreatitle " + i, asyncOffers.get(i).getAreatitle()).apply();
+                                    settingsPreferences.edit().putString("offerLink " + i, asyncOffers.get(i).getLink()).apply();
+                                    settingsPreferences.edit().putString("offerDesc " + i, asyncOffers.get(i).getDesc()).apply();
                                     settingsPreferences.edit().putLong("offerDate " + i, asyncOffers.get(i).getDate().getTime()).apply();
                                     settingsPreferences.edit().putString("offerDownloaded " + i, asyncOffers.get(i).getDownloaded()).apply();
                                     System.out.println(settingsPreferences.getLong("offerDate " + i, 0));

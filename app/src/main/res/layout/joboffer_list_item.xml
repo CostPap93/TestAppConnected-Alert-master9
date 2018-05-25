@@ -4,36 +4,45 @@
     android:layout_height="wrap_content"
     android:layout_margin="5dp"
     android:background="@drawable/buttonshape"
-    android:orientation="vertical"
-    android:shadowColor="#A8A8A8"
+    android:orientation="horizontal"
+    android:shadowColor="@color/ic_launcher_background"
     android:shadowDx="0"
     android:shadowDy="0"
     android:shadowRadius="5">
 
-    <TextView
-        android:id="@+id/txtv_offertitle"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:text="TextView"
-        android:textColor="#ff000000"
-        android:textSize="20sp" />
+    <ImageView
+        android:id="@+id/imgv_bee"
+        android:layout_width="100dp"
+        android:layout_height="80dp"
+        android:src="@drawable/app_icon" />
 
-    <TextView
-        android:id="@+id/txtv_offercategory"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:text="TextView"
-        android:textColor="#ff000000" />
+        android:layout_height="match_parent"
+        android:orientation="vertical">
 
-    <TextView
-        android:id="@+id/txtv_offerarea"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:text="TextView"
-        android:textAlignment="center"
-        android:textColor="@android:color/black" />
+        <TextView
+            android:id="@+id/txtv_offertitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="TextView"
+            android:textColor="#ff000000"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/txtv_offercategory"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="TextView"
+            android:textColor="#ff000000" />
+
+        <TextView
+            android:id="@+id/txtv_offerarea"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="TextView"
+            android:textAlignment="inherit"
+            android:textColor="@android:color/black" />
+    </LinearLayout>
 
 </LinearLayout>

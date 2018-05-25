@@ -1,24 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.txusballesteros.bubbles.BubbleLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:clipChildren="false"
     android:clipToPadding="false">
 
     <de.hdodenhof.circleimageview.CircleImageView
         android:id="@+id/avatar"
-        android:src="@drawable/datalabsbubble"
         android:layout_width="70dp"
+        android:src="@drawable/app_bubble2"
         android:layout_height="70dp"
-        app:civ_border_color="#FFFF"
-        app:civ_border_width="2dp"/>
+        android:cropToPadding="true" />
+
     <com.nex3z.notificationbadge.NotificationBadge
+        android:id="@+id/badge"
         android:layout_width="28dp"
         android:layout_height="28dp"
-        android:id="@+id/badge"
-        app:nbMaxTextLength="2"
         app:nbBackground="@drawable/bg_with_shadow"
+        app:nbMaxTextLength="2"
 
 
         ></com.nex3z.notificationbadge.NotificationBadge>
