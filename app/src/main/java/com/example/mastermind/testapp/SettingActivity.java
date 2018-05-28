@@ -393,7 +393,7 @@ public class SettingActivity  extends AppCompatActivity {
     }
 
     public StringRequest volleyUpdateDefault() {
-        String url = "http://10.0.2.2/android/jobOfferCategories.php?";
+        String url = Utils.jobAdCategoriesLink;
 
         // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
@@ -479,7 +479,7 @@ public class SettingActivity  extends AppCompatActivity {
     }
 
     public StringRequest volleyUpdateDefaultAreas() {
-        String url = "http://10.0.2.2/android/jobOfferAreas.php?";
+        String url = Utils.jobAdAreasLink;
 
         // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
@@ -566,7 +566,7 @@ public class SettingActivity  extends AppCompatActivity {
 
     public StringRequest volleySaveOffers(final String param, final String param2) {
 
-        String url = "http://10.0.2.2/android/jobAdsArray.php?";
+        String url = Utils.jobAdsLink;
 
         // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
@@ -762,7 +762,7 @@ public class SettingActivity  extends AppCompatActivity {
 
 
     public void volleySetDefault() {
-        String url = "http://10.0.2.2/android/jobOfferCategories.php";
+        String url = Utils.jobAdCategoriesLink;
 
         // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
@@ -846,7 +846,7 @@ public class SettingActivity  extends AppCompatActivity {
     }
 
     public void volleySetCheckedCategories(final String param, final String param2) {
-        String url = "http://10.0.2.2/android/jobAdsArray.php?";
+        String url = Utils.jobAdsLink;
 
         // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
@@ -1007,7 +1007,7 @@ public class SettingActivity  extends AppCompatActivity {
 
 
     public void volleySetDefaultAreas() {
-        String url = "http://10.0.2.2/android/jobOfferAreas.php";
+        String url = Utils.jobAdAreasLink;
 
         // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.GET, url,

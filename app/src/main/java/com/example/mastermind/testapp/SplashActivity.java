@@ -140,7 +140,9 @@ public class SplashActivity extends AppCompatActivity {
                     startActivity(intent);
                 }
             }
-        }, 2000);
+        }, 1000);
+
+
 
 
 
@@ -277,7 +279,7 @@ public class SplashActivity extends AppCompatActivity {
     }*/
 
     public void volleySetDefault(){
-        String url ="http://10.0.2.2/android/jobOfferCategories.php";
+        String url = Utils.jobAdCategoriesLink;
 
     // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
@@ -368,10 +370,10 @@ public class SplashActivity extends AppCompatActivity {
     }
 
     public void volleySetCheckedCategories(final String param,final String param2) {
-        String url = "http://10.0.2.2/android/jobAdsArray.php?";
+        String url = Utils.jobAdsLink;
 
         // Request a string response from the provided URL.
-        StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
+        final StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
@@ -460,8 +462,9 @@ public class SplashActivity extends AppCompatActivity {
 
                         System.out.println(t);
                         System.out.println(settingsPreferences.getInt("numberOfCheckedCategories", 0));
+                        Toast.makeText(SplashActivity.this,Utils.jobAdImagesFolder+"image1.jpg",Toast.LENGTH_LONG).show();
 
-                        volleyImageNames();
+                        new DownloadTask().execute(stringToURL(Utils.jobAdImagesFolder+"image1.jpg"),stringToURL(Utils.jobAdImagesFolder+"image2.jpg"));
 
                     }
 
@@ -503,7 +506,7 @@ public class SplashActivity extends AppCompatActivity {
             protected Map<String, String> getParams() {
                 Map<String, String> params = new HashMap<>();
                 params.put("jacat_id",param);
-                params.put("jaarea_id",param2);
+                params.put("jloc_id",param2);
 
                 return params;
             }
@@ -518,7 +521,7 @@ public class SplashActivity extends AppCompatActivity {
     }
 
     public void volleySetDefaultAreas(){
-        String url ="http://10.0.2.2/android/jobOfferAreas.php";
+        String url =Utils.jobAdAreasLink;
 
         // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
@@ -541,15 +544,15 @@ public class SplashActivity extends AppCompatActivity {
                             System.out.println(settingsPreferences.getInt("numberOfAreas", 0));
                             for (int i = 0; i < jsonArray.length(); i++) {
                                 JSONObject jsonObjectCategory = jsonArray.getJSONObject(i);
-                                settingsPreferences.edit().putInt("offerAreaId " + i, Integer.valueOf(jsonObjectCategory.getString("jaarea_id"))).apply();
-                                settingsPreferences.edit().putInt("checkedAreaId " + i, Integer.valueOf(jsonObjectCategory.getString("jaarea_id"))).apply();
-                                settingsPreferences.edit().putString("offerAreaTitle " + i, jsonObjectCategory.getString("jaarea_title")).apply();
-                                settingsPreferences.edit().putString("checkedAreaTitle " + i, jsonObjectCategory.getString("jaarea_title")).apply();
+                                settingsPreferences.edit().putInt("offerAreaId " + i, Integer.valueOf(jsonObjectCategory.getString("jloc_id"))).apply();
+                                settingsPreferences.edit().putInt("checkedAreaId " + i, Integer.valueOf(jsonObjectCategory.getString("jloc_id"))).apply();
+                                settingsPreferences.edit().putString("offerAreaTitle " + i, jsonObjectCategory.getString("jloc_title")).apply();
+                                settingsPreferences.edit().putString("checkedAreaTitle " + i, jsonObjectCategory.getString("jloc_title")).apply();
 
                                 if(areasIds.equals("")) {
-                                    areasIds += jsonObjectCategory.getString("jaarea_id");
+                                    areasIds += jsonObjectCategory.getString("jloc_id");
                                 }else
-                                    areasIds += ","+ jsonObjectCategory.getString("jaarea_id");
+                                    areasIds += ","+ jsonObjectCategory.getString("jloc_id");
                                 System.out.println(areasIds.toString());
 
                                 System.out.println(jsonObjectCategory.toString());
@@ -608,108 +611,116 @@ public class SplashActivity extends AppCompatActivity {
         Volley.newRequestQueue(SplashActivity.this).add(stringRequest);
     }
 
-    public void volleyImageNames() {
+//    public void volleyImageNames() {
+//
+//        final String url = Utils.jobAdImagesLink;
+//
+//        // Request a string response from the provided URL.
+//        StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
+//                new Response.Listener<String>() {
+//                    @Override
+//                    public void onResponse(String response) {
+//
+//                        ArrayList<Bitmap> myBitmaps = new ArrayList<>();
+//
+//
+//
+//
+//                        // Display the first 500 characters of the response string.
+//                        System.out.println("Volley: " + message);
+//                        System.out.println(response);
+//
+//                        try {
+//                            JSONObject jsonObjectAll = new JSONObject(response);
+//                            JSONArray jsonArray = jsonObjectAll.getJSONArray("images");
+//                            URL[] urls = new URL[jsonArray.length()];
+//                            for(int i=0;i<jsonArray.length();i++) {
+//
+//
+//                                JSONObject jsonObjectCategory = jsonArray.getJSONObject(i);
+//                                urls[i] = stringToURL(Utils.jobAdImagesFolder + jsonObjectCategory.getString("image_title"));
+//
+//
+//                            }
+//
+////                            for(int j=0;j<urls.length;j++){
+//                                new DownloadTask().execute(urls[0]).get();
+////                            }
+//
+//
+//                        } catch (JSONException e) {
+//                            e.printStackTrace();
+//                        } catch (InterruptedException e) {
+//                            e.printStackTrace();
+//                        } catch (ExecutionException e) {
+//                            e.printStackTrace();
+//                        }
+//
+//
+//                    }
+//
+//
+//                }, new Response.ErrorListener() {
+//            @Override
+//            public void onErrorResponse(VolleyError error) {
+//
+//                if (error instanceof TimeoutError || error instanceof NoConnectionError) {
+//                    message = "TimeOutError";
+//                    //This indicates that the reuest has either time out or there is no connection
+//
+//                } else if (error instanceof AuthFailureError) {
+//                    message = "AuthFailureError";
+//                    // Error indicating that there was an Authentication Failure while performing the request
+//
+//                } else if (error instanceof ServerError) {
+//                    message = "ServerError";
+//                    //Indicates that the server responded with a error response
+//
+//                } else if (error instanceof NetworkError) {
+//                    message = "NetworkError";
+//                    //Indicates that there was network error while performing the request
+//
+//                } else if (error instanceof ParseError) {
+//                    message = "ParseError";
+//                    // Indicates that the server response could not be parsed
+//
+//                }
+//                System.out.println("Volley: " + message);
+//                if (!message.equals("")) {
+//                    Toast.makeText(SplashActivity.this, "There is some problem with the server (" + message + ")", Toast.LENGTH_LONG).show();
+//                    Intent intentError = new Intent(SplashActivity.this, SettingActivity.class);
+//                    startActivity(intentError);
+//                }
+//            }
+//        }
+//        );
+//        Volley.newRequestQueue(SplashActivity.this).add(stringRequest);
+//    }
 
-        final String url = "http://10.0.2.2/android/images.php";
-
-        // Request a string response from the provided URL.
-        StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
-                new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(String response) {
-
-                        ArrayList<Bitmap> myBitmaps = new ArrayList<>();
-
-
-
-
-                        // Display the first 500 characters of the response string.
-                        System.out.println("Volley: " + message);
-                        System.out.println(response);
-
-                        try {
-                            JSONObject jsonObjectAll = new JSONObject(response);
-                            JSONArray jsonArray = jsonObjectAll.getJSONArray("images");
-                            URL[] urls = new URL[jsonArray.length()];
-                            for(int i=0;i<jsonArray.length();i++) {
-
-
-                                JSONObject jsonObjectCategory = jsonArray.getJSONObject(i);
-                                urls[i] = stringToURL("http://10.0.2.2/android/images/" + jsonObjectCategory.getString("image_title"));
-
-
-                            }
-
-                            for(int j=0;j<urls.length;j++){
-                                new DownloadTask().execute(urls[j]);
-                            }
-
-
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
-
-
-                    }
-
-
-                }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-
-                if (error instanceof TimeoutError || error instanceof NoConnectionError) {
-                    message = "TimeOutError";
-                    //This indicates that the reuest has either time out or there is no connection
-
-                } else if (error instanceof AuthFailureError) {
-                    message = "AuthFailureError";
-                    // Error indicating that there was an Authentication Failure while performing the request
-
-                } else if (error instanceof ServerError) {
-                    message = "ServerError";
-                    //Indicates that the server responded with a error response
-
-                } else if (error instanceof NetworkError) {
-                    message = "NetworkError";
-                    //Indicates that there was network error while performing the request
-
-                } else if (error instanceof ParseError) {
-                    message = "ParseError";
-                    // Indicates that the server response could not be parsed
-
-                }
-                System.out.println("Volley: " + message);
-                if (!message.equals("")) {
-                    Toast.makeText(SplashActivity.this, "There is some problem with the server (" + message + ")", Toast.LENGTH_LONG).show();
-                    Intent intentError = new Intent(SplashActivity.this, SettingActivity.class);
-                    startActivity(intentError);
-                }
-            }
-        }
-        );
-        Volley.newRequestQueue(SplashActivity.this).add(stringRequest);
-    }
-
-    private class DownloadTask extends AsyncTask<URL,Void,Bitmap>{
+    private class DownloadTask extends AsyncTask<URL,Void,ArrayList<Bitmap>>{
         // Before the tasks execution
         protected void onPreExecute(){
             // Display the progress dialog on async task start
         }
 
         // Do the task in background/non UI thread
-        protected Bitmap doInBackground(URL...urls){
-            URL url = urls[0];
-            HttpURLConnection connection = null;
+        protected ArrayList<Bitmap> doInBackground(URL...urls) {
 
-            try{
-                // Initialize a new http url connection
-                connection = (HttpURLConnection) url.openConnection();
+            ArrayList<Bitmap> bitmaps = new ArrayList<>();
 
-                // Connect the http url connection
-                connection.connect();
 
-                // Get the input stream from http url connection
-                InputStream inputStream = connection.getInputStream();
+                HttpURLConnection connection = null;
+
+                try {
+                    for (URL url : urls) {
+                        // Initialize a new http url connection
+                        connection = (HttpURLConnection) url.openConnection();
+
+                        // Connect the http url connection
+                        connection.connect();
+
+                        // Get the input stream from http url connection
+                        InputStream inputStream = connection.getInputStream();
 
                 /*
                     BufferedInputStream
@@ -721,8 +732,8 @@ public class SplashActivity extends AppCompatActivity {
                         Creates a BufferedInputStream and saves its argument,
                         the input stream in, for later use.
                 */
-                // Initialize a new BufferedInputStream from InputStream
-                BufferedInputStream bufferedInputStream = new BufferedInputStream(inputStream);
+                        // Initialize a new BufferedInputStream from InputStream
+                        BufferedInputStream bufferedInputStream = new BufferedInputStream(inputStream);
 
                 /*
                     decodeStream
@@ -737,29 +748,41 @@ public class SplashActivity extends AppCompatActivity {
                         Returns
                             Bitmap : The decoded bitmap, or null if the image data could not be decoded.
                 */
-                // Convert BufferedInputStream to Bitmap object
-                Bitmap bmp = BitmapFactory.decodeStream(bufferedInputStream);
+                        // Convert BufferedInputStream to Bitmap object
+                        bitmaps.add(BitmapFactory.decodeStream(bufferedInputStream));
+                        bufferedInputStream.close();
+                        inputStream.close();
 
-                // Return the downloaded bitmap
-                return bmp;
+                    }
 
-            }catch(IOException e){
-                e.printStackTrace();
-            }finally{
-                // Disconnect the http url connection
-                connection.disconnect();
-            }
-            return null;
+
+                    // Return the downloaded bitmap
+                    return bitmaps;
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } finally {
+                    // Disconnect the http url connection
+
+                    connection.disconnect();
+                }
+                return null;
+
         }
 
         // When all async task done
-        protected void onPostExecute(Bitmap result){
+        protected void onPostExecute(ArrayList<Bitmap> bitmaps){
             // Hide the progress dialog
 
-            Uri uri =saveImageToInternalStorage(result);
-            Intent intent = new Intent(SplashActivity.this,MainActivity.class);
-            intent.putExtra("uri",uri.toString());
-            startActivity(intent);
+                ArrayList<Uri> uris = saveImageToInternalStorage(bitmaps);
+                System.out.println(uris.toString());
+                settingsPreferences.edit().putInt("numberOfImages",uris.size()).apply();
+                for(int j=1;j<=uris.size();j++) {
+                    settingsPreferences.edit().putString("imageUri"+j, uris.get(j-1).toString()).apply();
+                }
+                Toast.makeText(SplashActivity.this, uris.toString(), Toast.LENGTH_LONG).show();
+                Intent intent = new Intent(SplashActivity.this,MainActivity.class);
+                startActivity(intent);
 
 
         }
@@ -777,43 +800,49 @@ public class SplashActivity extends AppCompatActivity {
     }
 
     // Custom method to save a bitmap into internal storage
-    protected Uri saveImageToInternalStorage(Bitmap bitmap){
+    protected ArrayList<Uri> saveImageToInternalStorage(ArrayList<Bitmap> bitmaps){
         // Initialize ContextWrapper
+        ArrayList<Uri> uris = new ArrayList<>();
         ContextWrapper wrapper = new ContextWrapper(getApplicationContext());
 
         // Initializing a new file
         // The bellow line return a directory in internal storage
         File file = wrapper.getDir("Images",MODE_PRIVATE);
+        System.out.println(file.toString());
+        settingsPreferences.edit().putString("imageUriFolder",file.toString()).apply();
+        for(int i = 1;i<=bitmaps.size();i++) {
+            Bitmap bitmap = bitmaps.get(i-1);
+            // Create a file to save the image
+            file = new File(file, "image" + i + ".jpg");
 
-        // Create a file to save the image
-        file = new File(file, "UniqueFileName"+".jpg");
+            try {
+                // Initialize a new OutputStream
+                OutputStream stream = null;
 
-        try{
-            // Initialize a new OutputStream
-            OutputStream stream = null;
+                // If the output file exists, it can be replaced or appended to it
+                stream = new FileOutputStream(file);
 
-            // If the output file exists, it can be replaced or appended to it
-            stream = new FileOutputStream(file);
+                // Compress the bitmap
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream);
 
-            // Compress the bitmap
-            bitmap.compress(Bitmap.CompressFormat.JPEG,100,stream);
+                // Flushes the stream
+                stream.flush();
 
-            // Flushes the stream
-            stream.flush();
+                // Closes the stream
+                stream.close();
 
-            // Closes the stream
-            stream.close();
+            } catch (IOException e) // Catch the exception
+            {
+                e.printStackTrace();
+            }
 
-        }catch (IOException e) // Catch the exception
-        {
-            e.printStackTrace();
+            // Parse the gallery image url to uri
+
+            uris.add(Uri.parse(file.getAbsolutePath()));
         }
 
-        // Parse the gallery image url to uri
-        Uri savedImageURI = Uri.parse(file.getAbsolutePath());
-
         // Return the saved image Uri
-        return savedImageURI;
+        return uris;
     }
 
 

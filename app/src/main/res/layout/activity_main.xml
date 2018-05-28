@@ -29,6 +29,7 @@
         android:background="@android:color/transparent"
         android:onClick="btnImgClicked"
         android:scaleType="fitXY"
+        android:visibility="gone"
         app:srcCompat="@drawable/buttonshape" />
 
 

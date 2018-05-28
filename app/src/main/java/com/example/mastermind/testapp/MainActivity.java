@@ -14,6 +14,7 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
@@ -64,6 +65,9 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.URL;
@@ -181,23 +185,18 @@ public class MainActivity extends AppCompatActivity  {
 
             }
         });
+//
+//        String uri = getIntent().getStringExtra("uri");
+////        System.out.println("This is the uri: "+uri.toString());
+        imgBtn_ad.setVisibility(View.VISIBLE);
+        String[] uris = new String[settingsPreferences.getInt("numberOfImages",0)];
+        for(int i =1;i<=settingsPreferences.getInt("numberOfImages",0);i++) {
 
-        String uri = getIntent().getStringExtra("uri");
-        System.out.println("This is the uri: "+uri.toString());
+            uris[i-1] = settingsPreferences.getString("imageUri"+i,"");
+            System.out.println("sadasdasd"+ uris[i-1]);
 
-        if(isConn()) {
-            Random random = new Random();
-
-            Picasso.with(MainActivity.this).load("http://10.0.2.2/android/images/image" + random + ".jpg").into(imgBtn_ad);
-            if(imgBtn_ad.getVisibility()==View.INVISIBLE){
-                imgBtn_ad.setVisibility(View.VISIBLE);
-            }
-        }else {
-            if (imgBtn_ad.getVisibility() == View.VISIBLE) {
-                imgBtn_ad.setVisibility(View.INVISIBLE);
-            }
         }
-
+        loadImageFromStorage(uris);
 
     }
 
@@ -261,7 +260,13 @@ public class MainActivity extends AppCompatActivity  {
                 areaIds += settingsPreferences.getInt("checkedAreaId " + v, 0);
         }
 
+        imgBtn_ad.setVisibility(View.VISIBLE);
+        String[] uris = new String[settingsPreferences.getInt("numberOfImages",0)];
+        for(int i =1;i<=settingsPreferences.getInt("numberOfImages",0);i++) {
+            uris[i-1] = settingsPreferences.getString("imageUri"+i,"");
 
+        }
+        loadImageFromStorage(uris);
 
 
     }
@@ -295,7 +300,7 @@ public class MainActivity extends AppCompatActivity  {
     }
 
     public StringRequest volleySetCheckedCategories(final String param,final String param2) {
-        String url = "http://10.0.2.2/android/jobAdsArray.php?";
+        String url = Utils.jobAdsLink;
 
 
         // Request a string response from the provided URL.
@@ -505,11 +510,13 @@ public class MainActivity extends AppCompatActivity  {
         imgBtn_ad = findViewById(R.id.imgBtn_ad);
         Random random = new Random(2);
 
-        Picasso.with(MainActivity.this).load("http://10.0.2.2/android/images/image" + random + ".jpg").into(imgBtn_ad);
-        if(imgBtn_ad.getVisibility()==View.INVISIBLE){
-            imgBtn_ad.setVisibility(View.VISIBLE);
-        }
+        imgBtn_ad.setVisibility(View.VISIBLE);
+        String[] uris = new String[settingsPreferences.getInt("numberOfImages",0)];
+        for(int i =1;i<=settingsPreferences.getInt("numberOfImages",0);i++) {
+            uris[i-1] = settingsPreferences.getString("imageUri"+i,"");
 
+        }
+        loadImageFromStorage(uris);
     }
 
     @Override
@@ -519,7 +526,7 @@ public class MainActivity extends AppCompatActivity  {
 
     public void volleyImage() {
 
-        String url = "http://10.0.2.2/android/images.php";
+        String url = Utils.jobAdImagesLink;
 
         // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
@@ -548,7 +555,7 @@ public class MainActivity extends AppCompatActivity  {
                             final Random rand = new Random();
                             final int rndInt = rand.nextInt(imageNames.length);
 
-                            Picasso.with(MainActivity.this).load("http://10.0.2.2/android/images/"+imageNames[rndInt]+".jpg").into(imgBtn_ad);
+                            Picasso.with(MainActivity.this).load(Utils.jobAdImagesFolder+imageNames[rndInt]+".jpg").into(imgBtn_ad);
 
 
 
@@ -593,6 +600,30 @@ public class MainActivity extends AppCompatActivity  {
         }
         );
         Volley.newRequestQueue(MainActivity.this).add(stringRequest);
+    }
+
+    private void loadImageFromStorage(String[] paths)
+    {
+        ArrayList<Bitmap> bitmaps = new ArrayList<>();
+        for(String path : paths) {
+
+
+            try {
+                File d = new File(path);
+                System.out.println("This is the path to upload: " + d.toString());
+                bitmaps.add(BitmapFactory.decodeStream(new FileInputStream(d)));
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
+
+        Random r = new Random();
+
+        int rnum =r.nextInt(2);
+        ImageButton img = findViewById(R.id.imgBtn_ad);
+        imgBtn_ad.setVisibility(View.VISIBLE);
+        img.setImageBitmap(bitmaps.get(rnum));
+
     }
 
 
